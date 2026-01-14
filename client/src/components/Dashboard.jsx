@@ -61,6 +61,7 @@ export default function Dashboard({ user, onNavigate }) {
     { name: 'London', country: 'UK', image: '🏰', info : 'https://theworldtravelguy.com/?s=bali' }
   ];
 
+
   return (
     <>
     <div className="min-h-screen bg-gray-50">
@@ -283,13 +284,13 @@ export default function Dashboard({ user, onNavigate }) {
             </button>
             
             <button 
-              onClick={() => onNavigate('community')} 
+              onClick={() => onNavigate('join-chat')} 
               className="group bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col items-center space-y-3 hover:-translate-y-2 hover:bg-gradient-to-br hover:from-emerald-50 border border-white/50"
             >
               <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center group-hover:bg-emerald-200 group-hover:scale-110 transition-all">
                 <Globe className="w-8 h-8 text-emerald-600" />
               </div>
-              <span className="font-bold text-gray-900 text-sm leading-tight text-center">Community</span>
+              <span className="font-bold text-gray-900 text-sm leading-tight text-center">Chat</span>
             </button>
             
             <button 

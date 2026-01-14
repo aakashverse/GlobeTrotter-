@@ -4,9 +4,10 @@ import { ChevronRight, Search, MapPin } from "lucide-react";
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
 
-export default function MyTrips({ onNavigate }) {
+export default function MyTrips({ onNavigate, user }) {
   // const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
+  const [myTrips, setMyTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const {showSuccess, showError} = useToast();
@@ -33,44 +34,58 @@ export default function MyTrips({ onNavigate }) {
   // edit trip
   const handleEditTrip = (trip) => {
     console.log(trip);
-    onNavigate(`/trips/${trip.trip_id}/edit`, {state: {trip}});
+    onNavigate(`/trips/${trip.trip_id}/edit`, {trip});
   };
 
   // add new stop
   const handleNewStop = (tripId) => {
-    console.log(tripId);
-    onNavigate(`/trips/trip-stop/${tripId}/new`);
+    // console.log(tripId);
+    onNavigate(`/trips/${tripId}/new-stop`);
   };
 
   useEffect(() => {
-    const fetchTrips = async () => {
+    const fetchAllTrips = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/trips", {
+
+        // owned trips
+        const ownedRes = await fetch("/api/trips", {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
 
-        if (!res.ok) throw new Error("Failed to fetch trips");
-        const data = await res.json();
+        if(!ownedRes.ok) throw new Error('Owned trips failed');
+        const ownedData = await ownedRes.json();
+        
+        // all trips (owned +joined)
+        const allRes = await fetch(`/api/users/${user.id}/trips`, {
+          headers : { Authorization: `Bearer ${token}`}
+        });
+        const allData = await allRes.json();
+
+        setTrips(Array.isArray(ownedData) ? ownedData : []);
+        setMyTrips(Array.isArray(allData) ? allData : []);
+
         // console.log("fetched trips:", data);
-        setTrips(Array.isArray(data) ? data : []);
       } catch (err) {
         showError("Failed to load trips");
         setTrips([]);
+        setMyTrips([]);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchTrips();
+     
+    if(token)
+      fetchAllTrips();
+    else setLoading(false);
   }, [token]);
 
-  const filteredTrips = trips.filter(trip =>
+  const filteredTrips = myTrips.filter(trip =>
     trip.trip_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    trip.descripton?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     trip.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -132,8 +147,7 @@ export default function MyTrips({ onNavigate }) {
                 key={trip.trip_id}
                 trip={trip}
                 token={token}
-                // onSelectTrip={onSelectTrip}
-                onNavigate={onNavigate}
+                role={trip.role || 'owner'}
                 onDelete={handleDeleteTrip}
                 onEditTrip={handleEditTrip}
                 onNewStop={handleNewStop}

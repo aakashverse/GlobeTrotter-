@@ -5,7 +5,7 @@ CREATE TABLE trip_stops (
     stop_order INT NOT NULL,
     start_date DATE,
     end_date DATE,
-    notes TEXT,
+    work TEXT,
     stop_name VARCHAR(30),
     amount_spent DECIMAL(10,0) DEFAULT 0,
     paid_by VARCHAR(20),

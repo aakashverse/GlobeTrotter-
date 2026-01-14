@@ -2,25 +2,32 @@ import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 
 import Login from "./components/Login";
+import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import CreateTrip from "./components/NewTrip";
 import MyTrip from "./components/MyTrip";
 import Itinerary from "./components/Itinerary";
 import Profile from "./components/Profile";
-import Community from "./components/Community";
 import City from "./components/City";
 import Calendar from "./components/Calender";
 import Admin from "./components/Admin";
 import Popular from "./components/Popular";
 import Header from "./components/Header";
+import EditTrip from "./components/EditTrip";
+import NewStop from "./components/NewStop";
+import JoinTripChat from "./components/JoinTripChat";
+import TripChat from "./components/TripChat";
 
 import useAuth from "./hooks/useAuth";
 import useToast from "./hooks/useToast";
 
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState("login");
-  const [selectedTrip, setSelectedTrip] = useState(null);
-
+  const [currentTrip, setCurrentTrip] = useState(null); 
+  const [currentTripId, setCurrentTripId] = useState(null);
+  const [chatTripId, setChatTripId] = useState(null);
+  const [chatUsername, setChatUsername] = useState(null);
   const { user, isAuthenticated, authReady, login, logout } = useAuth();
   const {showSuccess} = useToast();
 
@@ -40,11 +47,11 @@ export default function App() {
     );
   }
 
-  const handleBack = () =>{
-    setCurrentScreen("/dashboard");
-  }
+  // const handleBack = () =>{
+  //   setCurrentScreen("/dashboard");
+  // }
 
-  const handleCreateTrip = (tripData) =>{
+  const handleCreateTrip = () =>{
     // console.log("trip created!")
     showSuccess("Trip created successfully!");
     setTimeout(() => {
@@ -52,72 +59,135 @@ export default function App() {
     }, 1000); 
   }
 
+  
+  const handleNavigate = (path, state) => {
+    if (path.includes('edit')) {
+      setCurrentScreen('edit-trip');
+      setCurrentTrip(state?.trip);  // pass trip
+    } else if (path.includes('new-stop')) {
+      const tripId = path.split('/')[2]; // Extract from /trips/123/new-stop
+      setCurrentScreen('new-stop');
+      setCurrentTripId(tripId);        // Extract tripId
+    } else if(path === 'join-chat'){
+      setCurrentScreen('join-chat');
+    } else if(path === 'trip-chat'){
+      setCurrentScreen('trip-chat');
+    } else if (path === 'my-trips') {
+      setCurrentScreen('my-trips');
+    } else {
+      setCurrentScreen(path.replace('/', '')); // Handle other paths
+    }
+  };
+
   // User is authenticated and user object exists
   return (
     <>
       <Toaster position="top-right" />
-      
-      {!isAuthenticated || !user ?  (
-        <Login
+
+      {currentScreen === "login" && (
+        <Login 
           onLogin={(user) => {
             login(user);
             setCurrentScreen("dashboard");
           }}
+
+          onRegister={() => setCurrentScreen('register')}
+          />
+      )}
+
+      {currentScreen === "register" && (
+        <Register 
+          onBack={() => setCurrentScreen("login")} 
+          onLogin={() => setCurrentScreen("login")}
         />
-      ) : (
+      )}
+
+      {isAuthenticated && user &&  (
       <>
-      <Header
-        user={user}
-        onNavigate={setCurrentScreen}
-        onLogout={async () => {
-          await logout();
-          setCurrentScreen("login");
-        }}
-      />
+        <Header
+          user={user}
+          onNavigate={handleNavigate}
+          onLogout={logout}
+          />
+      
+        {currentScreen === "dashboard" && (
+          <Dashboard user={user} onNavigate={handleNavigate} />
+        )}
 
-      {currentScreen === "dashboard" && (
-        <Dashboard user={user} onNavigate={setCurrentScreen} />
-      )}
+        {currentScreen === "profile" && (
+          <Profile user={user} onBack={() => setCurrentScreen("dashboard")} />
+        )}
 
-      {currentScreen === "profile" && (
-        <Profile user={user} onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "create-trip" && (
+          <CreateTrip onBack={() => setCurrentScreen("dashboard")} onCreateTrip={handleCreateTrip}/>
+        )}
 
-      {currentScreen === "create-trip" && (
-        <CreateTrip onBack={handleBack} onCreateTrip={handleCreateTrip}/>
-      )}
+        {currentScreen === "my-trips" && (
+          <MyTrip onNavigate={handleNavigate} 
+            user={user}
+          />
+        )}
 
-      {currentScreen === "my-trips" && (
-        <MyTrip
-          trip={selectedTrip}
-          onSelectTrip={setSelectedTrip}
-          onNavigate={setCurrentScreen}
-        />
-      )}
+        {currentScreen === "build-itinerary" && (
+          <Itinerary onBack={() => setCurrentScreen("my-trips")} />
+        )}
 
-      {currentScreen === "build-itinerary" && (
-        <Itinerary onBack={() => setCurrentScreen("my-trips")} />
-      )}
+        {currentScreen === "join-chat" && (
+          <JoinTripChat 
+              onBack={() => setCurrentScreen("dashboard")}
+              onJoin={(tripId, username) => {
+                setChatTripId(tripId);
+                setChatUsername(username);
+                setCurrentScreen("trip-chat");
+              }}
+            />
+        )}
 
-      {currentScreen === "community" && (
-        <Community onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "trip-chat" && ( 
+          <TripChat 
+            tripId={chatTripId}
+            username={chatUsername}
+            userId={user.id}
+            onBack={() => setCurrentScreen("dashboard")}
+            token={localStorage.getItem('token')}
+          />
+        )}
 
-      {currentScreen === "calendar" && (
-        <Calendar onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "calendar" && (
+          <Calendar onBack={() => setCurrentScreen("dashboard")} />
+        )}
 
-      {currentScreen === "admin" && (
-        <Admin onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "admin" && (
+          <Admin onBack={() => setCurrentScreen("dashboard")} />
+        )}
 
-      {currentScreen === "city-search" && (
-        <City onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "city-search" && (
+          <City onBack={() => setCurrentScreen("dashboard")} />
+        )}
 
-      {currentScreen === "popular" && (
-        <Popular onBack={() => setCurrentScreen("dashboard")} />
-      )}
+        {currentScreen === "popular" && (
+          <Popular onBack={() => setCurrentScreen("dashboard")} />
+        )}
+
+      {/* Edit Trip Screen */}
+        {currentScreen === "edit-trip" && (
+          <EditTrip 
+            trip={currentTrip}
+            onNavigate={handleNavigate}
+            token={localStorage.getItem('token')}
+            onBack={() => setCurrentScreen("my-trips")}
+          />
+        )}
+
+      {/* New Stop Screen */}
+        {currentScreen === "new-stop" && (
+          <NewStop 
+            tripId={currentTripId}
+            onNavigate={handleNavigate}
+            token={localStorage.getItem('token')}
+            onBack={() => setCurrentScreen("my-trips")}
+           />
+        )}
     </>
   )};
   </>

@@ -11,9 +11,9 @@ import {
   Pin,
   X
 } from "lucide-react";
-import StopsForm from "./StopsForm";
+import StopDetails from "./StopsDetails";
 
-export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token }) {  
+export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token, role }) {  
   const [stops, setStops] = useState([]);  
   const [showStopsModal, setShowStopsModal] = useState(false);  
   const [loadingStops, setLoadingStops] = useState(false);
@@ -25,7 +25,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
       classes: "bg-yellow-100 text-yellow-800 border-yellow-400"
     },
     upcoming: {
-      label: "Upcoming",
+      label: "Upcoming", 
       icon: <Calendar size={14} />,
       classes: "bg-blue-100 text-blue-800 border-blue-400"
     },
@@ -42,7 +42,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
     classes: "bg-gray-100 text-gray-800 border-gray-300"
   };
   
-  // fetch stops
+  // Fetch stops
   useEffect(() => {
     if (trip.trip_id && token) {
       fetchStops();
@@ -77,7 +77,6 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
     onEditTrip(trip);
   };
 
-  // Toggle modal
   const toggleStopsModal = () => {
     setShowStopsModal(!showStopsModal);
   };
@@ -85,9 +84,9 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
   return (
     <>
       <div className={`rounded-xl p-6 border-l-4 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer ${status.classes}`}>
-        {/* Header */}
+        {/* header */}
         <div className="flex items-start justify-between mb-4">
-          <div>
+          <div className="flex-1">
             <h3 className="font-bold text-lg text-gray-900 truncate">
               {trip.trip_name}
             </h3>
@@ -98,7 +97,18 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
             )}
           </div>
 
-          {/* Status Badge */}
+          {/* Role Badge */}
+          {role && (
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ml-3 ${
+              role === 'owner' 
+                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
+                : 'bg-green-100 text-green-800 border border-green-200'
+            }`}>
+              {role === 'owner' ? '👑 Owner' : '👥 Member'}
+            </span>
+          )}
+
+          { /* Status Badge */}
           <span className={`flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-md border ${status.classes}`}>
             {status.icon}
             {status.label}
@@ -106,24 +116,28 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
         </div>
 
         {/* Meta Info */}
-        <div className="flex items-center justify-around gap-4 text-xs text-gray-600 mb-4">
+        <div className="flex items-center justify-between gap-4 text-sm text-gray-600 mb-4">
           <span className="flex items-center gap-1">
             <MapPin size={14} />
             {loadingStops ? '...' : stops.length} stops
           </span>
 
-          {trip.start_date && !isNaN(new Date(trip.start_date)) && (
+          {trip.start_date && (
             <span className="flex items-center gap-1">
               <Calendar size={14} />
-              {new Date(trip.start_date).toLocaleDateString()}
+              {new Date(trip.start_date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
             </span>
           )}
 
-          {/* Stop Details Button */}
+          {/* Proper Modal Toggle */}
           <button
             type="button"
             onClick={toggleStopsModal}
-            className="flex items-center gap-1 px-3 py-1 text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-lg transition-all hover:shadow-sm"
+            className="flex items-center gap-1 px-4 py-2 text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-lg transition-all hover:shadow-sm disabled:opacity-50"
             disabled={loadingStops}
           >
             <Pin size={14} />
@@ -133,9 +147,9 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
 
         {/* Trip Mates */}
         {trip.trip_mates && Array.isArray(trip.trip_mates) && trip.trip_mates.length > 0 && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-700">
             <Users size={16} />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {trip.trip_mates.map((mate, idx) => (
                 <span key={idx} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
                   {mate}
@@ -147,13 +161,13 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
 
         {/* Budget */}
         {trip.total_budget && Number(trip.total_budget) > 0 && (
-          <div className="mt-4 pt-4 border-t text-sm font-semibold text-gray-900">
+          <div className="mb-6 pt-4 border-t text-sm font-semibold text-gray-900">
             💰 Total Budget: ₹{Number(trip.total_budget).toLocaleString("en-IN")}
           </div>
         )}
         
         {/* Action Buttons */}
-        <div className="flex justify-around mt-6 pt-4 border-t gap-2">
+        <div className="flex gap-2">
           <button
             onClick={handleEdit}
             className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex-1 justify-center"
@@ -180,34 +194,28 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token 
         </div>
       </div>
 
-      {/* ✅ Fixed Modal */}
+      {/* ✅ FIXED: Complete Modal */}
       {showStopsModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-4xl max-h-[90vh] w-full overflow-auto shadow-2xl">
-            <div className="sticky top-0 bg-white p-6 border-b rounded-t-3xl z-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  🛑 {stops.length} Stops Details - {trip.trip_name}
-                </h2>
-                <button
-                  onClick={() => setShowStopsModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-2xl text-gray-500 hover:text-gray-700 transition-all"
-                >
-                  <X size={24} />
-                </button>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{trip.trip_name} Stops</h2>
+                <p className="text-gray-600">{stops.length} stops</p>
               </div>
+              <button
+                onClick={toggleStopsModal}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <X size={24} />
+              </button>
             </div>
-
-            {/* Pass actual stops data */}
-            {loadingStops ? (
-              <div className="p-6 text-center text-gray-500">Loading stops...</div>
-            ) : stops.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                No stops added yet.
-              </div>
-            ) : (
-              <StopsForm stops={stops} />
-            )}
+            
+            {/* Modal Content */}
+            <div className="max-h-96 overflow-auto p-6">
+              <StopDetails stops={stops} loading={loadingStops} tripId={trip.trip_id} />
+            </div>
           </div>
         </div>
       )}

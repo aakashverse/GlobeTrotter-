@@ -72,7 +72,7 @@ module.exports = (pool) => {
 
       const [result] = await pool.query(
         `INSERT INTO users
-        (first_name, last_name, email, password_hash, phone_number, city, country, profile_photo, additional_info, role)
+        (first_name, last_name, email, password_hash, phone_number, city, country, profile_photo, additional_info)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           first_name,
@@ -84,7 +84,6 @@ module.exports = (pool) => {
           country,
           profile_photo,
           additional_info,
-          'user'
         ]
       );
 

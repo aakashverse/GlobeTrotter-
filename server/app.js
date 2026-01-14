@@ -1,16 +1,20 @@
 const express = require('express');
+const jwt = require("jsonwebtoken");
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
+const http = require("http");
+const {Server} = require("socket.io");
 require('dotenv').config();
 
 const authenticateToken = require('./Middlewares/auth');
-const isAdmin = require('./Middlewares/isAdmin'); 
+// const isAdmin = require('./Middlewares/isAdmin'); 
 
 const app = express();
+const server = http.createServer(app);
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -33,6 +37,56 @@ async function testDB() {
   }
 }
 testDB();
+
+// init socket.io
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true
+  }
+});
+
+// socket auth
+io.use((socket, next) => {
+  try{
+    const token = socket.handshake.auth.token;
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = user;
+    next();
+  } catch{
+    next(new Error("Unauthorized"));
+  }
+});
+
+// socket events
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.user.user_id);
+
+  socket.on("joinTrip", (tripId) => {
+    socket.join(`trip_${tripId}`);
+    console.log(`user joined trip_${tripId}`);
+  });
+
+  socket.on("sendMessage", async({tripId, message}) => {
+    if(!message?.trim()) return;
+
+    // save in db
+    await pool.query(
+      `INSERT INTO trip_messages(trip_id, user_id, message)
+      VALUES (?,?,?)`,
+      [tripId, socket.user.user_id,message]
+    );
+
+    // broadcast to trip room
+    io.to(`trip_${tripId}`).emit("newMessage", {
+      tripId, message, user_id: socket.user.user_id, created_at: new Date()
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+});
 
 // Create uploads dir
 if (!fs.existsSync('uploads')) {
@@ -234,17 +288,70 @@ app.get('/api/trips', authenticateToken, async (req, res) => {
 // // Get single trip
 app.get('/api/trips/:id', authenticateToken, async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM trips WHERE trip_id=? AND (user_id=? OR is_public=TRUE)',
-      [req.params.id, req.user.user_id]
+    const {id} = req.params;
+    
+    const [[trip]] = await pool.query(
+      'SELECT * FROM trips WHERE trip_id=?', [id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Trip not found' });
-    res.json(rows[0]);
+
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    
+    const [[mate]] = await pool.query(
+      `SELECT 1 FROM trip_mates WHERE trip_id = ? AND mate_name = ?`,
+      [id, req.user.first_name + ' ' + req.user.last_name]
+    );
+    
+    const isOwner = trip.user_id === req.user.user_id;
+    if (!isOwner && !mate) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    res.json(trip);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// User's ALL trips (owned + joined)
+app.get('/api/users/:user_id/trips', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.user_id; // Use authenticated user
+    
+    // ✅ QUERY 1: Owned trips (role = 'owner')
+    const [ownedTrips] = await pool.query(`
+      SELECT 
+        t.*, 
+        'owner' as role,
+        1 as member_count
+      FROM trips t 
+      WHERE t.user_id = ?
+    `, [userId]);
+
+    // ✅ QUERY 2: Joined trips (role = 'member')  
+    const [joinedTrips] = await pool.query(`
+      SELECT 
+        t.*, 
+        'member' as role,
+        COUNT(tm.id) as member_count
+      FROM trips t 
+      JOIN trip_mates tm ON t.trip_id = tm.trip_id 
+      WHERE tm.mate_name = ? 
+        AND t.user_id != ?
+      GROUP BY t.trip_id
+    `, [req.user.first_name + ' ' + req.user.last_name, userId]);
+
+    // ✅ Combine + sort recent first
+    const allTrips = [...ownedTrips, ...joinedTrips]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    res.json(allTrips);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch trips' });
+  }
+});
+
 
 // Delete trip
 app.delete('/api/trips/:id', authenticateToken, async (req, res) => {
@@ -316,37 +423,55 @@ app.put('/api/trips/:id', authenticateToken, async(req, res) => {
   }
 })
 
-// singel trip stop
+// add trip stop
 app.post('/api/trips/:id/stops', authenticateToken, async (req, res) => {
   try {
     const tripId = req.params.id;
     const userId = req.user.user_id;
-    const {stop_name, work, amount, paid_by, grand_total} = req.body;
+    const {stop_name, work, amount_spent, paid_by} = req.body;
+    const amount = parseFloat(amount_spent) || 0;
     
     const [trip] = await pool.query(
-      'SELECT 1 FROM trips WHERE trip_id = ? AND user_id = ?',
-      [tripId, userId]
+      'SELECT * FROM trips WHERE trip_id = ?',
+      [tripId]
     );
 
-    if (trip.length === 0)
-    return res.status(403).json({ error: 'Unauthorized' });
-    
+    if(!trip){
+      return res.status(404).json({error: 'Trip not found'});
+    }
+
+    const [[mate]] = await pool.query(
+      `SELECT 1 FROM trip_mates WHERE trip_id = ? AND mate_name = ?`,
+      [tripId, req.user.first_name + ' ' + req.user.last_name]
+    );
+
+    const isOwner = trip.user_id === req.user.user_id;
+    if (amount > 0 && !isOwner && !mate) {
+      return res.status(403).json({ error: 'Only owners/members can add expenses' });
+    }
+
+    const [maxOrder] = await pool.query(
+      'SELECT COALESCE(MAX(stop_order), 0) as next_order FROM trip_stops WHERE trip_id = ?',
+      [tripId]
+    );
+
+    const stopOrder = (maxOrder[0].next_order || 0) + 1;
+
     const [result] = await pool.query(
       `INSERT INTO trip_stops 
-       (trip_id, stop_name, work, amount, paid_by, grand_total, stop_order)
-       VALUES (?, ?, ?, ?, ?, ?, 
-         (SELECT COALESCE(MAX(stop_order),0)+1 FROM trip_stops WHERE trip_id=?)
-       )`,
-      [tripId, stop_name, work, amount, paid_by, grand_total, tripId]
+       (trip_id, stop_name, work, amount_spent, paid_by, stop_order)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [tripId, stop_name, work, amount, paid_by, stopOrder]
     );
 
-    const [rows] = await pool.query(
+    const [newStop] = await pool.query(
       'SELECT * FROM trip_stops WHERE stop_id = ?', 
       [result.insertId]
-    )
+    );
     
-    res.status(201).json(rows[0]);
+    res.status(201).json(newStop[0]);
   } catch (err) {
+    // console.log(err.message);
     res.status(500).json({ error: 'server error'});
   }
 });
@@ -356,40 +481,137 @@ app.get('/api/trips/:id/stops', authenticateToken, async (req, res) => {
   try {
     const tripId = req.params.id;
     const userId = req.user.user_id;
-    
-    // Verify ownership
-    const [trip] = await pool.query(
-      'SELECT 1 FROM trips WHERE trip_id = ? AND user_id = ?',
-      [tripId, userId]
-    );
-
-    if (trip.length === 0) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
 
     const [rows] = await pool.query(
-      `SELECT * FROM trip_stops 
-       WHERE trip_id = ? 
-       ORDER BY stop_order ASC`,
+      `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order ASC`,
+      [tripId]
+    );
+    
+    // Verify ownership
+    const [[trip]] = await pool.query(
+      'SELECT * FROM trips WHERE trip_id = ?',
       [tripId]
     );
 
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const [[mate]] = await pool.query(
+      `SELECT 1 FROM trip_mates WHERE trip_id = ? AND mate_name = ?`,
+      [tripId, req.user.first_name + ' ' + req.user.last_name]
+    );
+
+    const isOwner = trip.user_id === userId;
+    if(!isOwner && !mate) return res.status(403).json({ error: 'Unauthorized' });
+
     res.json(rows);
   } catch (err) {
-    console.error('Get stops error:', err);
+    // console.error('Get stops error:', err);
     res.status(500).json({error: 'Internal server error'});
   }
 });
 
+// chat section
+// get message for a trip
+app.get('/api/trips/:id/chat', authenticateToken, async(req, res) => {
+  try{
+    const {id} = req.params;
+
+    // verify trip exists
+    const [[trip]] = await pool.query(
+      'SELECT * FROM trips WHERE trip_id = ?', [id]
+    );
+
+    if(!trip) return res.status(404).json({error: 'Trip not found!'});
+
+    const [[mate]] = await pool.query(
+      `SELECT 1 FROM  trip_mates
+      WHERE trip_id = ? AND mate_name = ?`,
+      [id, req.user.first_name + ' ' + req.user.last_name]
+    );
+
+    const isOwner = trip.user_id === req.user.user_id;
+    const isTripMate = mate;
+
+    if(!isOwner && !isTripMate){
+      return res.status(403).json({error: 'You must be trip owner or registered trip mate'});
+    }
+
+    const [messages] = await pool.query(
+      `SELECT m.message_id, m.message, m.created_at, 
+       u.first_name, u.last_name, u.user_id
+       FROM trip_messages m
+       JOIN users u ON u.user_id = m.user_id
+       WHERE m.trip_id = ?
+       ORDER BY m.created_at ASC`,
+      [id]
+    );
+
+    res.json(messages);
+  } catch(err){
+    console.log(err);
+    res.status(500).json({ error: 'Failed to fetch chat'});
+  }
+});
+
+// Register trip mate
+app.post('/api/trips/:id/join', authenticateToken, async(req, res) => {
+  const {id} = req.params;
+  const {mate_name} = req.body;  // From JoinTripChat
+
+  try {
+    // Verify trip exists
+    const [[trip]] = await pool.query('SELECT * FROM trips WHERE trip_id = ?', [id]);
+    if (!trip) return res.status(404).json({error: 'Trip not found'});
+
+    // Add trip mate
+    await pool.query(
+      `INSERT INTO trip_mates (trip_id, mate_name) 
+       VALUES (?, ?) 
+       ON DUPLICATE KEY UPDATE mate_name = VALUES(mate_name)`,
+      [id, mate_name]
+    );
+
+    res.json({success: true, message: 'Joined trip successfully!', trip_id: id});
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({error: 'Failed to join'});
+  }
+});
+
+
+// send message to a trip_mate
+app.post('/api/trips/:id/chat', authenticateToken, async(req, res) => {
+  try{
+    const {id} = req.params;
+    const {message} = req.body;
+
+    if(!message?.trim()){
+      return res.status(400).json({error: 'Message required'});
+    }
+
+    await pool.query(
+      `INSERT INTO trip_messages (trip_id, user_id, message)
+      VALUES(?, ?, ?)`, [id,req.user.user_id,message]
+    );
+
+    res.status(201).json({success:true});
+  } catch(err){
+    console.log(err);
+    res.status(500).json({error: 'Failed to send message'});
+  }
+})
+
 // Add itinerary item
 app.post('/api/stops/:stopId/itinerary', authenticateToken, async (req, res) => {
   try {
-    const { activity_name, day_number, activity_time, estimated_cost, notes, item_order } = req.body;
+    const { activity_name, day_number, activity_time, estimated_cost, work, item_order } = req.body;
     const [r] = await pool.query(
       `INSERT INTO itinerary_items 
-       (stop_id, activity_name, day_number, activity_time, estimated_cost, notes, item_order)
+       (stop_id, activity_name, day_number, activity_time, estimated_cost, work, item_order)
        VALUES (?,?,?,?,?,?,?)`,
-      [req.params.stopId, activity_name, day_number, activity_time, estimated_cost, notes, item_order]
+      [req.params.stopId, activity_name, day_number, activity_time, estimated_cost, work, item_order]
     );
     res.status(201).json({ itinerary_id: r.insertId });
   } catch (err) {
@@ -404,15 +626,15 @@ app.post('/api/trips/:tripId/budget', authenticateToken, async (req, res) => {
     if (!(await verifyTripOwner(req.params.tripId, req.user.user_id)))
       return res.status(403).json({ error: 'Unauthorized' });
 
-    const { category, estimated_amount, actual_amount, notes } = req.body;
+    const { category, estimated_amount, actual_amount, work } = req.body;
 
     await pool.query(
-      `INSERT INTO budget_breakdown (trip_id, category, estimated_amount, actual_amount, notes)
+      `INSERT INTO budget_breakdown (trip_id, category, estimated_amount, actual_amount, work)
        VALUES (?,?,?,?,?)
-       ON DUPLICATE KEY UPDATE estimated_amount=?, actual_amount=?, notes=?`,
+       ON DUPLICATE KEY UPDATE estimated_amount=?, actual_amount=?, work=?`,
       [
-        req.params.tripId, category, estimated_amount, actual_amount, notes,
-        estimated_amount, actual_amount, notes
+        req.params.tripId, category, estimated_amount, actual_amount, work,
+        estimated_amount, actual_amount, work
       ]
     );
     res.json({ message: 'Budget updated' });
@@ -443,4 +665,6 @@ app.get('/api/community/trips', async (_, res) => {
 
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server running on ${PORT}`);
+});
