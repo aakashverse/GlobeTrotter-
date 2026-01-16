@@ -24,10 +24,9 @@ export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) 
     if (!confirm(`Delete "${safeStop.stop_name}"?`)) return;
     
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`/api/trips/${tripId}/stops/${safeStop.stop_id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include'
       });
       if (res.ok) {
         showSuccess('Stop deleted!');

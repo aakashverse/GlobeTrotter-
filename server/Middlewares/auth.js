@@ -21,8 +21,9 @@ const authenticateToken = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     req.user = {
-      user_id: decoded.id,
-      email: decoded.email,
+      user_id: decoded.user_id,
+      first_name: decoded.first_name,
+      last_name: decoded.last_name,
       role: decoded.role || 'user',
     };
 

@@ -9,14 +9,22 @@ import {
   Plus,
   Pencil,
   Pin,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 import StopDetails from "./StopsDetails";
 
-export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token, role }) {  
+export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }) {  
   const [stops, setStops] = useState([]);  
   const [showStopsModal, setShowStopsModal] = useState(false);  
   const [loadingStops, setLoadingStops] = useState(false);
+  const [tripMates, setTripMates] = useState([]);
+  
+  // ai states
+  const [showQuickAI, setShowQuickAI] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const statusConfig = {
     ongoing: {
@@ -42,18 +50,55 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token,
     classes: "bg-gray-100 text-gray-800 border-gray-300"
   };
   
-  // Fetch stops
-  useEffect(() => {
-    if (trip.trip_id && token) {
-      fetchStops();
+  // ai handler
+  const askTripAI = async () => {
+    if (!aiQuery.trim()) return;
+    setLoadingAI(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/trips/${trip.trip_id}/ai-assistant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query: aiQuery })
+      });
+      const data = await res.json();
+      setAiResponse(data.response);
+      setAiQuery('');
+    } catch (err) {
+      setAiResponse("Sorry, AI is taking a coffee break! 😅");
+    } finally {
+      setLoadingAI(false);
     }
-  }, [trip.trip_id, token]);
+  };
+  
+  // Fetch stops and mates
+  useEffect(() => {
+    if (trip.trip_id) {
+      fetchStops();
+      fetchTripMates();
+    }
+  }, [trip.trip_id]);
+  
+  // fetch tripamtes
+  const fetchTripMates = async () => {
+  try {
+    const res = await fetch(`/api/trips/${trip.trip_id}/mates`, {
+      credentials: 'include'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTripMates(data || []);
+    }
+    } catch (err) {
+      console.error('Failed to fetch mates:', err);
+    }
+  };
 
   const fetchStops = async () => {
     setLoadingStops(true);
     try {
       const res = await fetch(`/api/trips/${trip.trip_id}/stops`, {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();
@@ -85,34 +130,31 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token,
     <>
       <div className={`rounded-xl p-6 border-l-4 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer ${status.classes}`}>
         {/* header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="font-bold text-lg text-gray-900 truncate">
-              {trip.trip_name}
-            </h3>
+          <div className="flex items-start justify-between mb-6 gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-xl text-gray-900 mb-2 truncate">{trip.trip_name}</h3>
             {trip.description && (
-              <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-                {trip.description}
-              </p>
+              <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">{trip.description}</p>
             )}
           </div>
 
-          {/* Role Badge */}
+        {/* Right side - Role + Status with SPACE */}
+        <div className="flex flex-col items-end gap-2 min-w-fit">
           {role && (
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ml-3 ${
+            <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${
               role === 'owner' 
-                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
-                : 'bg-green-100 text-green-800 border border-green-200'
+                ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-yellow-300/50' 
+                : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-emerald-300/50'
             }`}>
               {role === 'owner' ? '👑 Owner' : '👥 Member'}
             </span>
           )}
-
-          { /* Status Badge */}
-          <span className={`flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-md border ${status.classes}`}>
-            {status.icon}
-            {status.label}
-          </span>
+          
+        <span className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${status.classes}`}>
+          {status.icon}
+          {status.label}
+            </span>
+          </div>
         </div>
 
         {/* Meta Info */}
@@ -146,13 +188,13 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token,
         </div>
 
         {/* Trip Mates */}
-        {trip.trip_mates && Array.isArray(trip.trip_mates) && trip.trip_mates.length > 0 && (
+        {tripMates.length > 0 && (
           <div className="mb-4 flex items-center gap-2 text-sm text-gray-700">
             <Users size={16} />
             <div className="flex flex-wrap gap-1">
-              {trip.trip_mates.map((mate, idx) => (
+              {tripMates.map((mate, idx) => (
                 <span key={idx} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
-                  {mate}
+                  {mate.mate_name}
                 </span>
               ))}
             </div>
@@ -167,34 +209,96 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, token,
         )}
         
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleEdit}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex-1 justify-center"
-          >
-            <Pencil size={16} />
-            Edit
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button onClick={handleEdit} className="flex items-center gap-1 px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
+            <Pencil size={14} /> Edit
           </button>
 
-          <button
-            onClick={() => onNewStop(trip.trip_id)}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex-1 justify-center"
-          >
-            <Plus size={16} />
-            New Stop
+          <button onClick={() => onNewStop(trip.trip_id)} className="flex items-center gap-1 px-3 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
+            <Plus size={14} /> New
           </button>
 
+          <button onClick={handleDelete} className="flex items-center gap-1 px-3 py-2 text-xs bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
+            <Trash2 size={14} /> Delete
+          </button>
+
+          {/* AI btn */}
           <button
-            onClick={handleDelete}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex-1 justify-center"
+            onClick={() => setShowQuickAI(true)}
+            className="flex items-center gap-1 px-3 py-2 text-xs bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all justify-center"
+            title="Ask AI about this trip"
           >
-            <Trash2 size={16} />
-            Delete
+            <Sparkles size={14} />
+            AI
           </button>
         </div>
       </div>
 
-      {/* ✅ FIXED: Complete Modal */}
+       {/* Quick AI Modal */}
+      {showQuickAI && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[80vh] shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-6 border-b bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-8 h-8 animate-pulse" />
+                  <div>
+                    <h2 className="text-xl font-bold">{trip.trip_name} AI</h2>
+                    <p className="text-indigo-100 text-sm">Ask about weather, food, plans...</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQuickAI(false)}
+                  className="p-2 hover:bg-white/20 rounded-2xl transition-all"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* AI Chat */}
+            <div className="p-6 max-h-96 overflow-y-auto">
+              {aiResponse && (
+                <div className="mb-4 p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-5 h-5 text-indigo-500" />
+                    <span className="text-sm font-semibold text-indigo-800">Trip AI</span>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed">{aiResponse}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-6 border-t bg-gray-50">
+              <div className="flex gap-3">
+                <input
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  placeholder="Weather? Restaurants? Day 2 plan?"
+                  className="flex-1 bg-white border-2 border-gray-200 hover:border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl px-4 py-3 placeholder-gray-500 transition-all"
+                  onKeyDown={(e) => e.key === 'Enter' && !loadingAI && askTripAI()}
+                />
+                <button
+                  onClick={askTripAI}
+                  disabled={!aiQuery.trim() || loadingAI}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all flex-shrink-0 flex items-center gap-2"
+                >
+                  {loadingAI ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-5 h-5" />
+                  )}
+                  Ask
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*Complete Modal */}
       {showStopsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">

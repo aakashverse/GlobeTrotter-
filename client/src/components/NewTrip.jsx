@@ -107,8 +107,8 @@ export default function NewTrip({ onBack, onCreateTrip }) {
     try {
       const res = await fetch("/api/trips", {
         method: "POST",
+        credentials: 'include',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(submitData),

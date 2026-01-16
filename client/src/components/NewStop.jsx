@@ -4,7 +4,7 @@ import { Plus, MapPin, DollarSign, Users, X } from 'lucide-react';
 import useToast from '../hooks/useToast';
 import StopDetails from './StopsDetails';
 
-export default function NewStop({ token, tripId, onBack }) {
+export default function NewStop({ tripId, onBack }) {
   const [formData, setFormData] = useState({
     stop_name: '',
     work: '',
@@ -31,9 +31,9 @@ export default function NewStop({ token, tripId, onBack }) {
     try {
       const res = await fetch(`/api/trips/${tripId}/stops`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           stop_name: formData.stop_name.trim(),

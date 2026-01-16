@@ -21,13 +21,11 @@ import TripChat from "./components/TripChat";
 import useAuth from "./hooks/useAuth";
 import useToast from "./hooks/useToast";
 
-
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState("login");
   const [currentTrip, setCurrentTrip] = useState(null); 
   const [currentTripId, setCurrentTripId] = useState(null);
   const [chatTripId, setChatTripId] = useState(null);
-  const [chatUsername, setChatUsername] = useState(null);
   const { user, isAuthenticated, authReady, login, logout } = useAuth();
   const {showSuccess} = useToast();
 
@@ -135,9 +133,8 @@ export default function App() {
         {currentScreen === "join-chat" && (
           <JoinTripChat 
               onBack={() => setCurrentScreen("dashboard")}
-              onJoin={(tripId, username) => {
+              onJoin={(tripId) => {
                 setChatTripId(tripId);
-                setChatUsername(username);
                 setCurrentScreen("trip-chat");
               }}
             />
@@ -146,10 +143,10 @@ export default function App() {
         {currentScreen === "trip-chat" && ( 
           <TripChat 
             tripId={chatTripId}
-            username={chatUsername}
             userId={user.id}
+            firstName={user.first_name}
+            lastName={user.last_name}
             onBack={() => setCurrentScreen("dashboard")}
-            token={localStorage.getItem('token')}
           />
         )}
 
@@ -174,7 +171,6 @@ export default function App() {
           <EditTrip 
             trip={currentTrip}
             onNavigate={handleNavigate}
-            token={localStorage.getItem('token')}
             onBack={() => setCurrentScreen("my-trips")}
           />
         )}
@@ -184,7 +180,6 @@ export default function App() {
           <NewStop 
             tripId={currentTripId}
             onNavigate={handleNavigate}
-            token={localStorage.getItem('token')}
             onBack={() => setCurrentScreen("my-trips")}
            />
         )}

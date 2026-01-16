@@ -19,8 +19,7 @@ export default function Profile({ user, onBack, showToast }) {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <div className="flex items-start space-x-8">
             <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-              {user?.first_name?.charAt(0)}
-              {user?.last_name?.charAt(0)}
+              {user.profile_photo} ? {user?.profile_photo} : {user?.first_name?.charAt(0)} {user?.last_name?.charAt(0)}
             </div>
 
             <div className="flex-1">
@@ -35,11 +34,11 @@ export default function Profile({ user, onBack, showToast }) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Phone</p>
-                      <p className="font-medium">+1 234 567 890</p>
+                      <p className="font-medium">{user?.phone_number}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-medium">New York, USA</p>
+                      <p className="font-medium">{user?.country}, {user?.city}</p>
                     </div>
                   </div>
                   <button

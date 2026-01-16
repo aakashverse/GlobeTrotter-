@@ -105,6 +105,7 @@ module.exports = (pool) => {
   // login
   router.post('/login', async (req, res) => {
     try {
+      console.log(req.body);
       const { email, password } = req.body;
 
       if (!email || !password) {
@@ -139,7 +140,9 @@ module.exports = (pool) => {
 
       const token = jwt.sign(
         {
-          id: user.user_id,
+          user_id: user.user_id,
+          first_name: user.first_name,
+          last_name: user.last_name,
           email: user.email,
         },
         JWT_SECRET,

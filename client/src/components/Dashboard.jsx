@@ -6,7 +6,8 @@ import {
   Calendar,
   Heart,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Bot
 } from 'lucide-react';
 import Header from './Header';
 
@@ -312,6 +313,7 @@ export default function Dashboard({ user, onNavigate }) {
               </div>
               <span className="font-bold text-gray-900 text-sm leading-tight text-center">Itinerary</span>
             </button>
+            
           </div>
         </section>
       </main>

@@ -1,45 +1,36 @@
 import { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom";
 import { ChevronRight, Search, MapPin } from "lucide-react"; 
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
 
 export default function MyTrips({ onNavigate, user }) {
-  // const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [myTrips, setMyTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const {showSuccess, showError} = useToast();
-  const token = localStorage.getItem('token');
 
   const handleDeleteTrip = async (tripId) => {
-    try{
+    try {
       const res = await fetch(`/api/trips/${tripId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
+        credentials: 'include'
       });
       
       if(!res.ok) throw new Error(`Delete Failed: ${res.status}`);
-      setTrips(trips.filter(trip => trip.trip_id !== tripId));
+      setTrips(prev => prev.filter(trip => trip.trip_id !== tripId));
+      setMyTrips(prev => prev.filter(trip => trip.trip_id !== tripId));
       showSuccess('Trip deleted!');
-    } catch(err){
+    } catch(err) {
       showError('Delete failed');
     }
-  }
+  };
   
-  // edit trip
   const handleEditTrip = (trip) => {
-    console.log(trip);
     onNavigate(`/trips/${trip.trip_id}/edit`, {trip});
   };
 
-  // add new stop
   const handleNewStop = (tripId) => {
-    // console.log(tripId);
     onNavigate(`/trips/${tripId}/new-stop`);
   };
 
@@ -48,28 +39,25 @@ export default function MyTrips({ onNavigate, user }) {
       try {
         setLoading(true);
 
-        // owned trips
+        // ✅ 1. Owned trips only
         const ownedRes = await fetch("/api/trips", {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          credentials: 'include'
         });
-
-        if(!ownedRes.ok) throw new Error('Owned trips failed');
+        if(!ownedRes.ok) throw new Error('Failed to fetch owned trips');
         const ownedData = await ownedRes.json();
-        
-        // all trips (owned +joined)
-        const allRes = await fetch(`/api/users/${user.id}/trips`, {
-          headers : { Authorization: `Bearer ${token}`}
+
+        // ✅ 2. ALL trips (owned + joined) - Use correct endpoint
+        const allRes = await fetch(`/api/users/${user.user_id}/trips`, {
+          credentials: 'include'
         });
+        if(!allRes.ok) throw new Error('Failed to fetch all trips');  // ✅ Fixed
         const allData = await allRes.json();
 
         setTrips(Array.isArray(ownedData) ? ownedData : []);
         setMyTrips(Array.isArray(allData) ? allData : []);
 
-        // console.log("fetched trips:", data);
       } catch (err) {
+        console.error('Fetch error:', err);
         showError("Failed to load trips");
         setTrips([]);
         setMyTrips([]);
@@ -77,11 +65,15 @@ export default function MyTrips({ onNavigate, user }) {
         setLoading(false);
       }
     };
-     
-    if(token)
+    
+    // ✅ FIXED: Check user exists (from login cookie)
+    if(user) {
       fetchAllTrips();
-    else setLoading(false);
-  }, [token]);
+    } else {
+      onNavigate('login');
+      setLoading(false);
+    }
+  }, [user, onNavigate]);  // ✅ Use user prop instead of undefined token
 
   const filteredTrips = myTrips.filter(trip =>
     trip.trip_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,7 +106,6 @@ export default function MyTrips({ onNavigate, user }) {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Search Bar */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-8 flex items-center space-x-4 border">
           <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
           <input
@@ -126,7 +117,6 @@ export default function MyTrips({ onNavigate, user }) {
           />
         </div>
 
-        
         {filteredTrips.length === 0 ? (
           <div className="text-center py-20">
             <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -141,12 +131,10 @@ export default function MyTrips({ onNavigate, user }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
             {filteredTrips.map((trip) => (
               <TripCard 
                 key={trip.trip_id}
                 trip={trip}
-                token={token}
                 role={trip.role || 'owner'}
                 onDelete={handleDeleteTrip}
                 onEditTrip={handleEditTrip}
