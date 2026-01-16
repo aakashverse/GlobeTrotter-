@@ -19,13 +19,13 @@ export default function NewTrip({ onBack, onCreateTrip }) {
   const [formData, setFormData] = useState({
     tripName: "",
     description: "",
-    place: "",
     startDate: "",
     endDate: "",
     status: "",
     total_budget: "",
     tripMates: [], // my fav feature :)
-    suggestions: [],
+    destination: "",
+    suggestions: []
   });
 
   const [showCitySelector, setShowCitySelector] = useState(false);
@@ -37,7 +37,7 @@ export default function NewTrip({ onBack, onCreateTrip }) {
       const placesText = selectedCities
         .map((city) => `${city.name}, ${city.country}`)
         .join(", ");
-      setFormData((prev) => ({ ...prev, place: placesText }));
+      setFormData((prev) => ({ ...prev, destination: placesText }));
       showSuccess(`${selectedCities.length} city added to destination!`);
     }
     setShowCitySelector(false); 
@@ -64,7 +64,7 @@ export default function NewTrip({ onBack, onCreateTrip }) {
     // basic validation
     if (
       !formData.tripName.trim() ||
-      !formData.place.trim() ||
+      !formData.destination.trim() ||
       !formData.startDate ||
       !formData.endDate ||
       !formData.status ||
@@ -91,11 +91,11 @@ export default function NewTrip({ onBack, onCreateTrip }) {
     const submitData = {
       user_id: 1,
       trip_name: formData.tripName.trim(),
-      // fallback: if description empty, use place
-      description: formData.description || formData.place.trim(),
+      description: formData.description,
       status: formData.status,
       start_date: formData.startDate,
       end_date: formData.endDate,
+      destination: formData.destination,
       total_budget: budgetNum,
       ...(formData.tripMates?.filter(m => m.trim()).length > 0 && {
         trip_mates: formData.tripMates.filter(m => m.trim())
@@ -197,19 +197,20 @@ export default function NewTrip({ onBack, onCreateTrip }) {
             <div className="space-y-3">
               {formData.tripMates.map((mate, index) => (
                 <div key={index} className="flex gap-2 items-end">
-        <input
-          type="text"
-          placeholder="Enter name :)"
-          value={mate}
-          onChange={(e) => {
-            const newMates = [...formData.tripMates];
-            newMates[index] = e.target.value;
-            setFormData((prev) => ({
-              ...prev,
-              tripMates: newMates,
-            }));
+               <input
+                 type="text"
+                 value={mate}
+                 onChange={(e) => {
+                   const newMates = [...formData.tripMates];
+                   newMates[index] = e.target.value;
+                   setFormData((prev) => ({
+                     ...prev,
+                     tripMates: newMates,
+                   })
+              );
           }}
           className="flex-1 p-4 pl-9 border-2 border-gray-200 rounded-2xl focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-100 shadow-sm text-lg"
+          placeholder="mate name"
         />
         <button
           type="button"
@@ -293,7 +294,7 @@ export default function NewTrip({ onBack, onCreateTrip }) {
               key={index}
               className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full"
             >
-              {mate.trip_mates}
+              {mate}
             </span>
           ))}
       </div>
@@ -332,11 +333,11 @@ export default function NewTrip({ onBack, onCreateTrip }) {
                 <div className="relative">
                   <input
                     type="text"
-                    value={formData.place}
+                    value={formData.destination}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        place: e.target.value,
+                        destination: e.target.value,
                       }))
                     }
                     className="w-full p-4 pl-9 border-2 border-gray-200 rounded-2xl focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100/50 shadow-sm text-lg font-medium pr-20"
@@ -360,7 +361,7 @@ export default function NewTrip({ onBack, onCreateTrip }) {
 
                 {formData.place && (
                   <p className="text-sm text-green-600 font-medium mt-1">
-                    {formData.place.substring(0, 50)}...
+                    {formData.destination.substring(0, 50)}...
                   </p>
                 )}
               </div>

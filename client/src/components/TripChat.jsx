@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, ScrollText, ChevronLeft, Sparkles } from "lucide-react";
+import { Send, ScrollText, ChevronLeft, Bot } from "lucide-react";
 import { io } from "socket.io-client";
 import useToast from "../hooks/useToast";
+import TripAI from "./TripAI";
 
 export default function TripChat({ tripId, userId, firstName, onBack }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [showMobileAI, setShowMobileAI] = useState(false);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const { showError } = useToast();
@@ -24,11 +26,11 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
     setAiResponse(''); // Clear previous response
     
     try {
-      const res = await fetch(`http://localhost:5000/api/trips/${tripId}/ai-assistant`, {
+      const res = await fetch(`/api/trips/${tripId}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ query: aiQuery })
+        body: JSON.stringify({ userQuery: aiQuery })
       });
       
       if (!res.ok) throw new Error(`AI API error: ${res.status}`);
@@ -173,8 +175,11 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
     );
   }
 
-   return (
+
+  return (
   <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-indigo-50">
+    
+    {/* HEADER */}
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 p-4 flex items-center gap-4 shadow-sm sticky top-0 z-10">
       <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
         <ChevronLeft size={20} />
@@ -190,157 +195,174 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
       </div>
     </header>
 
-    <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
-      {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 py-20">
-          <div className="w-20 h-20 bg-gray-200/50 rounded-3xl flex items-center justify-center mb-6">
-            <ScrollText size={32} className="text-gray-400" />
-          </div>
-          <p className="text-2xl font-semibold text-gray-600 mb-2">No messages yet</p>
-          <p className="text-sm">Start the conversation with your tripmates!</p>
+    {/* MAIN CONTENT: CHAT + AI */}
+    <div className="flex flex-1 overflow-hidden min-h-0">
+
+      {/* CHAT SECTION (LEFT) */}
+      <div className="flex flex-col flex-1">
+
+        {/* MESSAGES */}
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 py-20">
+              <div className="w-20 h-20 bg-gray-200/50 rounded-3xl flex items-center justify-center mb-6">
+                <ScrollText size={32} className="text-gray-400" />
+              </div>
+              <p className="text-2xl font-semibold text-gray-600 mb-2">No messages yet</p>
+              <p className="text-sm">Start the conversation with your tripmates!</p>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, index) => {
+                const isOwn = Number(msg.user_id) === Number(userId);
+                const prevMsg = messages[index - 1];
+                const isSameSender =
+                  prevMsg && Number(prevMsg.user_id) === Number(msg.user_id);
+
+                return (
+                  <div
+                    key={`${msg.message_id}-${index}`}
+                    className={`flex w-full ${
+                      isOwn ? "justify-end" : "justify-start"
+                    } ${isSameSender ? "mt-1" : "mt-4"}`}
+                  >
+                    <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%]`}>
+                      {!isOwn && !isSameSender && (
+                        <span className="text-xs text-gray-500 mb-1 ml-1 font-semibold">
+                          {msg.first_name}
+                        </span>
+                      )}
+
+                      <div
+                        className={`px-4 py-3 rounded-2xl shadow-md break-words ${
+                          isOwn
+                            ? "bg-emerald-600 text-white rounded-br-sm"
+                            : "bg-white text-gray-800 border border-gray-300 rounded-bl-sm"
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                        <div
+                          className={`flex justify-end mt-1 text-[11px] ${
+                            isOwn ? "text-emerald-100" : "text-gray-400"
+                          }`}
+                        >
+                          {new Date(msg.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {isOwn && (
+                            <span className="ml-1">
+                              {msg.isOptimistic ? "⌛" : "✓✓"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      ) : (
-        <>
-          {messages.map((msg, index) => {
-          const isOwn = Number(msg.user_id) === Number(userId);
-          const prevMsg = messages[index - 1];
-          const isSameSender =
-          prevMsg && Number(prevMsg.user_id) === Number(msg.user_id);
 
-       return (
-    <div
-      key={`${msg.message_id}-${index}`}
-      className={`flex w-full ${
-        isOwn ? "justify-end" : "justify-start"
-      } ${isSameSender ? "mt-1" : "mt-4"}`}
-    >
-      <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%]`}>
-        
-        {/* Sender name (only for received, once per group) */}
-        {!isOwn && !isSameSender && (
-          <span className="text-xs text-gray-500 mb-1 ml-1 font-semibold">
-            {msg.first_name}
-          </span>
-        )}
-
-        {/* MESSAGE BUBBLE */}
-        <div
-          className={`px-4 py-3 rounded-2xl shadow-md break-words ${
-            isOwn
-              ? "bg-emerald-600 text-white rounded-br-sm"
-              : "bg-white text-gray-800 border border-gray-300 rounded-bl-sm"
-          }`}
+        {/* INPUT */}
+        <form
+          onSubmit={sendMessage}
+          className="bg-white/80 backdrop-blur-lg border-t border-gray-200/50 p-4 px-6 shadow-2xl"
         >
-          <p className="text-sm leading-relaxed">{msg.message}</p>
+          <div className="flex gap-3 items-end">
+            <input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="flex-1 bg-white/70 border border-gray-200 hover:border-gray-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl px-5 py-3 text-base placeholder-gray-500 transition-all duration-200 focus:outline-none"
+              placeholder="Message your tripmates..."
+              disabled={!isConnected}
+            />
+            <button
+              type="submit"
+              disabled={!newMessage.trim() || !isConnected}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 shadow-lg hover:shadow-xl text-white p-4 rounded-2xl transition-all"
+            >
+              <Send size={20} />
+            </button>
+          </div>
+          {!isConnected && (
+            <p className="text-xs text-red-500 mt-2 text-center font-medium animate-pulse">
+              Reconnecting...
+            </p>
+          )}
+        </form>
 
-          <div
-            className={`flex justify-end mt-1 text-[11px] ${
-              isOwn ? "text-emerald-100" : "text-gray-400"
-            }`}
+        <button
+          onClick={() => setShowMobileAI(true)}
+          className="lg:hidden fixed bottom-24 right-4 z-40
+                     bg-gradient-to-r from-indigo-500 to-purple-500
+                     text-white p-4 rounded-full shadow-xl
+                     flex items-center justify-center"
           >
-            {new Date(msg.created_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            {isOwn && (
-              <span className="ml-1">
-                {msg.isOptimistic ? "⌛" : "✓✓"}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-})}
-
-        </>
-      )}
-      <div ref={messagesEndRef} />
-    </div>
-
-    <form onSubmit={sendMessage} className="bg-white/80 backdrop-blur-lg border-t border-gray-200/50 p-4 px-6 shadow-2xl">
-      <div className="flex gap-3 items-end">
-        <input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          className="flex-1 bg-white/70 border border-gray-200 hover:border-gray-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl px-5 py-3 text-base placeholder-gray-500 transition-all duration-200 resize-none focus:outline-none"
-          placeholder="Message your tripmates..."
-          disabled={!isConnected}
-        />
-        <button 
-          type="submit" 
-          disabled={!newMessage.trim() || !isConnected}
-          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 disabled:shadow-none shadow-lg hover:shadow-xl text-white p-4 rounded-2xl transition-all duration-200 flex-shrink-0"
-        >
-          <Send size={20} />
+          <Bot className="w-6 h-6" />
         </button>
       </div>
-      {!isConnected && (
-        <p className="text-xs text-red-500 mt-2 text-center font-medium animate-pulse">Reconnecting...</p>
-      )}
-    </form>
 
-    {/* trip ai */}
-     <div className="border-t pt-4 mt-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-2xl">
-    <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-      <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />
-      Trip AI Assistant
-    </h3>
-    
-    <div className="flex gap-3">
-      <input
-        value={aiQuery}
-        onChange={(e) => setAiQuery(e.target.value)}
-        placeholder="Weather in Delhi? Best restaurants? Day 2 plan?"
-        className="flex-1 bg-white border-2 border-indigo-200 hover:border-indigo-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 rounded-2xl px-5 py-3 text-base placeholder-gray-500 transition-all"
-        onKeyDown={(e) => e.key === 'Enter' && !loadingAI && askTripAI()}
-        disabled={loadingAI}
-      />
-      <button 
-        onClick={askTripAI}
-        disabled={!aiQuery.trim() || loadingAI}
-        className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all flex-shrink-0 flex items-center gap-2"
+      {/* TRIP AI (RIGHT) */}
+      <div className="hidden lg:flex flex-col w-[360px] border-l bg-gradient-to-b from-indigo-50 to-purple-50">
+        <div className="sticky top-[72px] h-[calc(100vh-72px)] overflow-y-auto p-4">
+          <TripAI
+            tripId={tripId}
+            aiQuery={aiQuery}
+            setAiQuery={setAiQuery}
+            aiResponse={aiResponse}
+            loadingAI={loadingAI}
+            askTripAI={askTripAI}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* MOBILE SLIDE-IN AI */}
+<div
+  className={`fixed inset-0 z-50 lg:hidden transition-all duration-300
+    ${showMobileAI ? "visible" : "invisible"}`}
+>
+  {/* BACKDROP */}
+  <div
+    onClick={() => setShowMobileAI(false)}
+    className={`absolute inset-0 bg-black/40 transition-opacity
+      ${showMobileAI ? "opacity-100" : "opacity-0"}`}
+  />
+
+  {/* PANEL */}
+  <div
+    className={`absolute right-0 top-0 h-full w-[90%] max-w-sm
+      bg-gradient-to-b from-indigo-50 to-purple-50
+      shadow-2xl transform transition-transform duration-300
+      ${showMobileAI ? "translate-x-0" : "translate-x-full"}`}
+  >
+    {/* HEADER */}
+    <div className="flex items-center justify-between p-4 border-b">
+      <h3 className="font-bold text-gray-900">Trip AI</h3>
+      <button
+        onClick={() => setShowMobileAI(false)}
+        className="text-sm text-indigo-600 font-semibold"
       >
-        {loadingAI ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            AI...
-          </>
-        ) : (
-          <>
-            <Sparkles className="w-5 h-5" />
-            Ask
-          </>
-        )}
+        Close
       </button>
     </div>
 
-
-  {/* AI Response Bubble - Same style as chat */}
-   {aiResponse && (
-      <div className="mt-6 p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 backdrop-blur-sm border border-indigo-200 rounded-3xl shadow-xl">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
-            <Sparkles className="w-5 h-5 text-white animate-pulse" />
-          </div>
-          <div>
-            <h4 className="font-bold text-indigo-900 text-sm mb-1">Trip AI</h4>
-            <p className="text-xs text-indigo-600 opacity-90">Generated for {tripId}</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{aiResponse}</p>
-        <button
-          onClick={() => setAiResponse('')}
-          className="mt-3 text-xs text-indigo-500 hover:text-indigo-700 font-medium ml-auto block"
-        >
-          Clear
-        </button>
-      </div>
-    )}
-
+    {/* AI CONTENT */}
+    <div className="h-[calc(100%-56px)] p-4">
+      <TripAI
+        tripId={tripId}
+        aiQuery={aiQuery}
+        setAiQuery={setAiQuery}
+        aiResponse={aiResponse}
+        loadingAI={loadingAI}
+        askTripAI={askTripAI}
+      />
+    </div>
   </div>
 </div>
-);
-
-}
+</div>
+)};
+ 

@@ -15,6 +15,8 @@ const OpenAI = require("openai");
 const authenticateToken = require('./Middlewares/auth');
 const app = express();
 const server = http.createServer(app);
+
+// openai setup
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -68,7 +70,7 @@ const io = new Server(server, {
 io.use(async (socket, next) => {
   try {
     const rawCookie = socket.handshake.headers.cookie;
-    console.log(rawCookie);
+    // console.log(rawCookie);
 
     if (!rawCookie) return next(new Error("No cookies provided"));
     
@@ -79,14 +81,14 @@ io.use(async (socket, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     
-    console.log('🔑 JWT user_id:', decoded.user_id); // CRITICAL LINE!
+    // console.log('JWT user_id:', decoded.user_id); 
     
     const [rows] = await pool.query(
       `SELECT first_name, last_name FROM users WHERE user_id = ?`,
       [decoded.user_id]
     );
 
-    console.log('👤 DB users found:', rows.length); // CRITICAL LINE!
+    // console.log('DB users found:', rows.length); 
 
     if (!rows.length) return next(new Error("user not found"));
  
@@ -95,7 +97,7 @@ io.use(async (socket, next) => {
       first_name: rows[0].first_name,
       last_name: rows[0].last_name
     };
-    console.log('Socket auth OK:', socket.user.user_id);
+    // console.log('Socket auth OK:', socket.user.user_id);
     next();
   } catch(err){
     console.log("Socket auth error: ", err.message);
@@ -109,7 +111,7 @@ io.on("connection", (socket) => {
   socket.on("joinTrip", ({tripId}) => {
     socket.join(`trip_${tripId}`);
     console.log(`user ${socket.user.user_id} joined trip_${tripId}`);
-    console.log(`📊 Room users:`, Object.keys(socket.adapter.rooms[`trip_${tripId}`] || {}).length);
+    // console.log(`Room users:`, Object.keys(socket.adapter.rooms[`trip_${tripId}`] || {}).length);
   });
 
   socket.on("sendMessage", async({tripId, message, tempId}) => {
@@ -137,7 +139,7 @@ io.on("connection", (socket) => {
         // delivered: false,
         // read: false
     };
-    console.log('📤 Broadcasting to trip_', tripId, chatMsg);
+    // console.log('Broadcasting to trip_', tripId, chatMsg);
     io.to(`trip_${tripId}`).emit("newMessage", chatMsg);
   });
 
@@ -273,12 +275,12 @@ app.get('/api/activities', async (req, res) => {
 // Create trip
 app.post('/api/trips', authenticateToken, async (req, res) => {
   try {
-    const { trip_name, description, status, start_date, end_date, total_budget, trip_mates = [] } = req.body;
+    const { trip_name, description, status, start_date, end_date, destination, total_budget, trip_mates = [] } = req.body;
 
     const [result] = await pool.query(
-      `INSERT INTO trips (user_id, trip_name, description, status, start_date, end_date, total_budget)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.user_id, trip_name, description, status, start_date, end_date, total_budget || 0]
+      `INSERT INTO trips (user_id, trip_name, description, status, start_date, end_date, destination, total_budget)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.user.user_id, trip_name, description, status, start_date, end_date, destination, total_budget || 0]
     );
 
     const tripId = result.insertId;
@@ -610,13 +612,14 @@ app.get('/api/trips/:id/mates', authenticateToken, async (req, res) => {
   }
 });
 
-// gemini route as trip AI
+//  route as trip AI
 app.post('/api/trips/:tripId/ai-assistant', authenticateToken, async (req, res) => {
   try {
     const { tripId } = req.params;
-    const { query } = req.body;
+    const { userQuery } = req.body;
+    console.log(req.body);
 
-     if (!query?.trim()) {
+     if (!userQuery?.trim()) {
       return res.status(400).json({ error: "Query is required" });
     }
 
@@ -633,36 +636,39 @@ app.post('/api/trips/:tripId/ai-assistant', authenticateToken, async (req, res) 
       Stops: ${stops.map(s => s.stop_name).join(', ') || 'None'}
       Trip Mates: ${mates.map(m => m.mate_name).join(', ')}
       Total Budget: ₹${trip[0]?.total_budget || 0}
+      
     `;
-    
-    // setup call
-      const completion = await openai.responses.create({
-      model: "gpt-4.1",
+    // add country and destinations for better ai response
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: `
-            You are a smart, friendly travel assistant named Trippy.
-            Use the provided trip context to answer accurately.
-            ${context}
-          `
+          content: `ou are Trippy, a friendly travel assistant.
+                    Use this trip context:\n${context}`
         },
         {
           role: "user",
-          content: query
-        }
+          content: userQuery,
+        },
       ],
-      temperature: 0.7,
-      max_tokens: 300
+      max_tokens: 800,
     });
 
-    res.json({
-      response: completion.choices[0].message.content
-    });
+    const result = response.choices[0].message.content;
+    res.json({response: result})
+    console.log(result);
 
-    res.json({ response: result.text() });
-  } catch (err) {
+  }catch(err) {
     console.error('AI Error:', err);
+
+    if (err.status === 429) {
+      return res.status(429).json({
+        error: "AI is busy. Please wait a few seconds."
+      });
+    }
+
     res.status(500).json({ error: 'AI unavailable' });
   }
 });
