@@ -10,7 +10,7 @@ import Itinerary from "./components/Itinerary";
 import Profile from "./components/Profile";
 import City from "./components/City";
 import Calendar from "./components/Calender";
-import Admin from "./components/Admin";
+import Analytics from "./components/Analytics";
 import Popular from "./components/Popular";
 import Header from "./components/Header";
 import EditTrip from "./components/EditTrip";
@@ -70,8 +70,12 @@ export default function App() {
       setCurrentScreen('join-chat');
     } else if(path === 'trip-chat'){
       setCurrentScreen('trip-chat');
-    } else if (path === 'my-trips') {
+    } else if (path === 'my-trips'){
       setCurrentScreen('my-trips');
+    } else if (path === 'trip-ai'){
+      setCurrentScreen('trip-ai');
+    } else if (path === 'analytics'){
+      setCurrentScreen('analytics');
     } else {
       setCurrentScreen(path.replace('/', '')); // Handle other paths
     }
@@ -105,7 +109,7 @@ export default function App() {
         <Header
           user={user}
           onNavigate={handleNavigate}
-          onLogout={logout}
+          onLogout={() => setCurrentScreen('login')}
           />
       
         {currentScreen === "dashboard" && (
@@ -154,8 +158,8 @@ export default function App() {
           <Calendar onBack={() => setCurrentScreen("dashboard")} />
         )}
 
-        {currentScreen === "admin" && (
-          <Admin onBack={() => setCurrentScreen("dashboard")} />
+        {currentScreen === "analytics" && (
+          <Analytics onBack={() => setCurrentScreen("dashboard")} />
         )}
 
         {currentScreen === "city-search" && (
@@ -175,7 +179,7 @@ export default function App() {
           />
         )}
 
-      {/* New Stop Screen */}
+      {/* New Stop Screen */} 
         {currentScreen === "new-stop" && (
           <NewStop 
             tripId={currentTripId}
@@ -183,6 +187,13 @@ export default function App() {
             onBack={() => setCurrentScreen("my-trips")}
            />
         )}
+
+        {/* trip-ai
+         {currentScreen === "trip-ai" && (
+          <TripAI 
+            onBack={() => setCurrentScreen("dashboard")}
+           />
+        )} */}
     </>
   )};
   </>

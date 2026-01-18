@@ -37,6 +37,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
       
       const data = await res.json();
       setAiResponse(data.response || "No response from AI 🤖");
+      setAiQuery('');
     } catch (err) {
       console.error('AI Error:', err);
       setAiResponse("AI is offline. Try again later! 😅");
@@ -51,7 +52,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
 
   useEffect(() => scrollToBottom(), [messages]);
 
-  // ✅ FIXED: Load chat history
+  // Load chat history
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -60,7 +61,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        console.log('📥 Loaded history:', data.length, 'messages');
+        // console.log('📥 Loaded history:', data.length, 'messages');
         
         const fixedMessages = Array.isArray(data) ? data.map(msg => ({
           ...msg,
@@ -91,13 +92,13 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
     const socket = socketRef.current;
 
     const handleConnect = () => {
-      console.log('SOCKET CONNECTED:', socket.id);
+      // console.log('SOCKET CONNECTED:', socket.id);
       setIsConnected(true);
       socket.emit("joinTrip", { tripId, userId });
     };
 
     const handleDisconnect = () => {
-      console.log('SOCKET DISCONNECTED');
+      // console.log('SOCKET DISCONNECTED');
       setIsConnected(false);
     };
 
@@ -109,7 +110,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
 
     // Proper newMessage handler
     const handleNewMessage = (msg) => {
-      console.log('📨 RECEIVED:', msg);
+      // console.log(' RECEIVED:', msg);
       setMessages(prev => {
         // Check if message already exists (exact match or optimistic)
         const exists = prev.some(m => 

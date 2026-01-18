@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export default function CalendarScreen({ onBack }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -86,30 +86,8 @@ export default function CalendarScreen({ onBack }) {
           <h1 className="text-2xl font-bold text-gray-800">Calendar View</h1>
         </div>
       </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-md p-4 mb-8 flex items-center space-x-4">
-          <Search className="w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="flex-1 outline-none"
-          />
-          <button className="px-4 py-2 border border-gray-300 rounded-lg">
-            Group by
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg">
-            Filter
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg">
-            Sort by...
-          </button>
-        </div>
-
+      <hr></hr>
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Calendar View
-          </h2>
 
           <div className="flex justify-center items-center mb-6 space-x-8">
             <button
@@ -142,7 +120,6 @@ export default function CalendarScreen({ onBack }) {
             {renderDays()}
           </div>
         </div>
-      </main>
     </div>
   );
 }

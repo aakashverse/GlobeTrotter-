@@ -3,17 +3,21 @@ import {
   MapPin,
   Globe,
   ListTodo,
-  Calendar,
+  CalendarDays,
+  Clock,
+  CheckCircle,
   Heart,
   Sparkles,
   ArrowRight,
-  Bot
 } from 'lucide-react';
-import Header from './Header';
+
+import { useState, useEffect } from 'react';
 
 export default function Dashboard({ user, onNavigate }) {
+  const [previousTrips, setPreviousTrips] = useState([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
 
-  if (!user) {
+  if(!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading user info...
@@ -21,38 +25,59 @@ export default function Dashboard({ user, onNavigate }) {
     );
   }
 
-  const previousTrips = [
-  {
-    id: 1,
-    name: "Paris Adventure",
-    image: "https://plus.unsplash.com/premium_photo-1661919210043-fd847a58522d?q=1000&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?w=400&h=300&fit=crop",
-    description: "7 days exploring the City of Light with Eiffel Tower, Louvre, and Seine cruises",
-    status: "completed",
-    stops: 3,
-    startDate: "2024-03-15",
-    country: "France"
-  },
-  {
-    id: 2,
-    name: "Tokyo Food Journey",
-    image: "https://images.unsplash.com/photo-1668562810574-0ff271257517?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fHRva3lvJTIwZm9vZCUyMGpvdXJuZXl8ZW58MHx8MHx8fDA%3D",
-    description: "10 days of sushi tours, street food, and cultural experiences in Tokyo",
-    status: "completed", 
-    stops: 5,
-    startDate: "2024-04-22",
-    country: "Japan"
-  },
-  {
-    id: 3,
-    name: "New York City Escape",
-    image: "https://images.unsplash.com/flagged/photo-1575597255483-55f2afb6f42c?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    description: "5 days discovering Times Square, Central Park, and Broadway shows",
-    status: "completed",
-    stops: 4,
-    startDate: "2024-05-10",
-    country: "USA"
-  }
-];
+  useEffect(() => {
+  const fetchTrips = async () => {
+    try {
+      const res = await fetch(`/api/trips?userId=${user.id}`, {
+        credentials: "include"
+      });
+      const data = await res.json();
+
+      // sort by date (latest first) and take only 3
+      const recentTrips = data
+        .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+        .slice(0, 3);
+
+      setPreviousTrips(recentTrips);
+    } catch (err) {
+      console.error("Failed to load trips", err);
+    } finally {
+      setLoadingTrips(false);
+    }
+  };
+
+  fetchTrips();
+}, [user.id]);
+   
+// get trip status and icon
+const getStatusMeta = (status) => {
+  switch (status) {
+    case "completed":
+      return {
+        label: "Completed",
+        icon: <CheckCircle className="w-4 h-4" />,
+        className: "text-green-700 bg-green-100"
+      };
+    case "ongoing":
+      return {
+        label: "Ongoing",
+        icon: <Clock className="w-4 h-4" />,
+        className: "text-orange-700 bg-orange-100"
+      };
+    case "upcoming":
+      return {
+        label: "Upcoming",
+        icon: <CalendarDays className="w-4 h-4" />,
+        className: "text-blue-700 bg-blue-100"
+      };
+    default:
+      return {
+        label: status,
+        icon: null,
+        className: "text-gray-600 bg-gray-100"
+      };
+    }
+  };
 
   const topDestinations = [
     { name: 'Paris', country: 'France', image: '🗼', info: 'https://theworldtravelguy.com/?s=Paris' },
@@ -169,9 +194,9 @@ export default function Dashboard({ user, onNavigate }) {
 </div>
 </section>
 
-      {/* Previous Trips */}
+    {/* Previous Trips */}
     <section className="mb-20">
-     <div className="flex justify-between items-center mb-12">
+    <div className="flex justify-between items-center mb-12">
       <div className="flex items-center space-x-4">
       <div className="w-3 h-12 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full shadow-lg" />
       <div>
@@ -188,75 +213,76 @@ export default function Dashboard({ user, onNavigate }) {
     </button>
   </div>
   
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    {previousTrips.map((trip) => (
-      <div 
-        key={trip.id}
-        onClick={() => {
-          // onSelectTrip?.(trip); // Pass trip data if needed
-          onNavigate('itinerary');
-        }}
-        className="group bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden hover:shadow-3xl hover:-translate-y-4 transition-all duration-700 cursor-pointer border border-white/50 hover:border-blue-200 relative"
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+  {/* Loading */}
+  {loadingTrips && (
+    <div className="col-span-full text-center text-gray-500 text-lg">
+      Loading trips...
+    </div>
+  )}
+
+  {/* No trips */}
+  {!loadingTrips && previousTrips.length === 0 && (
+    <div className="col-span-full bg-white/80 backdrop-blur-sm border border-dashed border-gray-300 rounded-3xl p-12 text-center shadow-lg">
+      <Bot className="w-14 h-14 mx-auto text-gray-400 mb-4" />
+      <h4 className="text-2xl font-bold text-gray-800 mb-2">
+        No previous trips
+      </h4>
+      <p className="text-gray-600 mb-6">
+        Start planning your first adventure with Trip AI ✨
+      </p>
+      <button
+        onClick={() => onNavigate("create-trip")}
+        className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition"
+      >
+        Create Trip
+      </button>
+    </div>
+  )}
+
+  {/* Trips exist */}
+  {!loadingTrips &&
+    previousTrips.map((trip) => (
+      <div
+        key={trip.trip_id}
+        onClick={() => onNavigate("itinerary", { trip })}
+        className="group bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden hover:-translate-y-3 transition-all cursor-pointer"
       >
         {/* Image */}
-        <div 
-          className="h-80 relative overflow-hidden group-hover:scale-110 transition-transform duration-700"
-          style={{ 
-            backgroundImage: `url(${trip.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
-          {/* Status Badge */}
-          <div className="absolute top-6 right-6">
-            <span className="bg-white/95 backdrop-blur-sm text-green-700 px-4 py-2 rounded-2xl font-bold text-sm shadow-lg flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span>Completed</span>
-            </span>
-          </div>
-          
-          {/* Quick Stats */}
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="flex items-center justify-between text-white/90 text-sm">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4" />
-                <span>{trip.stops} stops</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date(trip.startDate).toLocaleDateString('short')}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
+        {/* <div
+          className="h-72 bg-cover bg-center"
+          style={{ backgroundImage: `url(${trip.image_url})` }}
+        /> */}
+
         {/* Content */}
-        <div className="p-10">
-          <h4 className="text-3xl font-black text-gray-900 mb-4 group-hover:text-blue-600 transition-all line-clamp-2 leading-tight">
-            {trip.name}
-          </h4>
-          
-          <p className="text-gray-600 text-lg mb-8 leading-relaxed line-clamp-3">
-            {trip.description}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 text-sm text-gray-500 font-medium">
-              <Globe className="w-5 h-5 text-gray-400" />
-              <span>{trip.country}</span>
-            </div>
-            <button className="group/btn bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden relative">
-              <span className="relative z-10 flex items-center space-x-2">
-                View Details
-                <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+        <div className="p-8 relative">
+        <div className="absolute top-6 right-6">
+          {(() => {
+            const meta = getStatusMeta(trip.status);
+            return (
+              <span
+                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${meta.className}`}
+              >
+                {meta.icon}
+                {meta.label}
               </span>
-              <div className="absolute inset-0 bg-white/20 backdrop-blur-sm opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-            </button>
-          </div>
+            );
+          })()}
+        </div>
+      
+        <h4 className="text-2xl font-black mb-3">{trip.trip_name}</h4>
+      
+        <p className="text-gray-600 mb-4 line-clamp-2">
+          {trip.description || "No description available"}
+        </p>
+      
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>{trip.destination}</span>
+          <span>{new Date(trip.start_date).toLocaleDateString()}</span>
         </div>
       </div>
+    </div>
     ))}
   </div>
 </section>
@@ -299,7 +325,7 @@ export default function Dashboard({ user, onNavigate }) {
               className="group bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col items-center space-y-3 hover:-translate-y-2 hover:bg-gradient-to-br hover:from-orange-50 border border-white/50"
             >
               <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center group-hover:bg-orange-200 group-hover:scale-110 transition-all">
-                <Calendar className="w-8 h-8 text-orange-600" />
+                <CalendarDays className="w-8 h-8 text-orange-600" />
               </div>
               <span className="font-bold text-gray-900 text-sm leading-tight text-center">Calendar</span>
             </button>

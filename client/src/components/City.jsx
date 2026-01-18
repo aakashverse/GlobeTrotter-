@@ -42,10 +42,19 @@ export default function City({ onBack, onAddCity }) {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
-      <div className="flex items-center mb-6 cursor-pointer" onClick={onBack}>
-        <ChevronRight className="w-6 h-6 rotate-180 text-blue-600" />
-        <span className="ml-2 text-blue-600 font-semibold">Back</span>
-      </div>
+       <header className="bg-white sticky top-0 z-20 border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Back
+          </h1>
+        </div>
+      </header>
 
       {/* Search */}
       <div className="flex items-center mb-6">

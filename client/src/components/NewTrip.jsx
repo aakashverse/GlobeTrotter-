@@ -9,8 +9,7 @@ import {
   Tag,
   Globe,
   DollarSign,
-  Users,
-  PinIcon,      
+  Users,     
 } from "lucide-react";
 import useToast from "../hooks/useToast";
 import City from "./City";

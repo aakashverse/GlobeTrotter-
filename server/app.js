@@ -274,32 +274,65 @@ app.get('/api/activities', async (req, res) => {
 
 // Create trip
 app.post('/api/trips', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const { trip_name, description, status, start_date, end_date, destination, total_budget, trip_mates = [] } = req.body;
+    await connection.beginTransaction();
 
-    const [result] = await pool.query(
-      `INSERT INTO trips (user_id, trip_name, description, status, start_date, end_date, destination, total_budget)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.user_id, trip_name, description, status, start_date, end_date, destination, total_budget || 0]
+    const {
+      trip_name,
+      description,
+      status,
+      start_date,
+      end_date,
+      destination,
+      total_budget,
+      trip_mates = []
+    } = req.body;
+
+    // Insert trip
+    const [result] = await connection.query(
+      `INSERT INTO trips (
+        user_id, trip_name, description, status,
+        start_date, end_date, destination, total_budget
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.user_id,
+        trip_name,
+        description,
+        status,
+        start_date,
+        end_date,
+        destination || null,
+        total_budget || 0
+      ]
     );
 
     const tripId = result.insertId;
 
-    // add onwer
-    const matesSet = new Set([
+    // Prepare mates
+    const mates = new Set([
       `${req.user.first_name} ${req.user.last_name}`,
-      ...trip_mates.map(m => m.trim())
+      ...trip_mates.map(m => m.trim()).filter(Boolean)
     ]);
 
-    const values = [...matesSet].map(name => [tripId, name]);
+    // Insert mates SAFELY
+    for (const name of mates) {
+      await connection.query(
+        `INSERT INTO trip_mates (trip_id, mate_name)
+         VALUES (?, ?)`,
+        [tripId, name]
+      );
+    }
 
-    await pool.query(
-      `INSERT INTO trip_mates (trip_id, mate_name) VALUES ?`,
-      [values]
-    );
-    res.json({trip_id: tripId});
+    await connection.commit();
+    res.status(201).json({ trip_id: tripId });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    await connection.rollback();
+    console.error("Trip create error:", err);
+    res.status(500).json({ error: "Failed to create trip" });
+  } finally {
+    connection.release();
   }
 });
 
@@ -617,35 +650,35 @@ app.post('/api/trips/:tripId/ai-assistant', authenticateToken, async (req, res) 
   try {
     const { tripId } = req.params;
     const { userQuery } = req.body;
-    console.log(req.body);
-
-     if (!userQuery?.trim()) {
+    
+    if (!userQuery?.trim()) {
       return res.status(400).json({ error: "Query is required" });
     }
-
+    
     if (!(await isTripMember(tripId, req.user))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
+    // console.log(req.body);
 
-    const [trip] = await pool.query('SELECT * FROM trips WHERE trip_id = ?', [tripId]);
+    const [trip]  = await pool.query('SELECT * FROM trips WHERE trip_id = ?', [tripId]);
     const [stops] = await pool.query('SELECT stop_name FROM trip_stops WHERE trip_id = ?', [tripId]);
     const [mates] = await pool.query('SELECT mate_name FROM trip_mates WHERE trip_id = ?', [tripId]);
 
     const context = `
+      You are helping with a travel plan.
       Trip Name: ${trip[0]?.trip_name}
       Stops: ${stops.map(s => s.stop_name).join(', ') || 'None'}
       Trip Mates: ${mates.map(m => m.mate_name).join(', ')}
       Total Budget: ₹${trip[0]?.total_budget || 0}
-      
+      Destination Country/City: ${trip[0]?.destination || 'Not specified'}
     `;
-    // add country and destinations for better ai response
 
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: `ou are Trippy, a friendly travel assistant.
+          content: `you are Trippy, a friendly travel assistant.
                     Use this trip context:\n${context}`
         },
         {
@@ -673,6 +706,88 @@ app.post('/api/trips/:tripId/ai-assistant', authenticateToken, async (req, res) 
   }
 });
 
+// analytics route (ADMIN ONLY)
+app.get("/api/admin/analytics", authenticateToken, async (req, res) => {
+  try {
+    /* TOTAL USERS */
+    const [[users]] = await pool.query(
+      "SELECT COUNT(*) total FROM users"
+    );
+
+    /* ACTIVE USERS TODAY */
+    const [[activeUsers]] = await pool.query(
+      `SELECT COUNT(DISTINCT user_id) total
+       FROM trips
+       WHERE DATE(created_at) = CURDATE()`
+    );
+
+    /* TOTAL TRIPS */
+    const [[trips]] = await pool.query(
+      "SELECT COUNT(*) total FROM trips"
+    );
+
+    /* TRIPS BY STATUS */
+    const [statusStats] = await pool.query(`
+      SELECT status, COUNT(*) count
+      FROM trips
+      GROUP BY status
+    `);
+
+    /* POPULAR CITIES */
+    const [popularCities] = await pool.query(`
+      SELECT destination, COUNT(*) trips
+      FROM trips
+      GROUP BY destination
+      ORDER BY trips DESC
+      LIMIT 5
+    `);
+
+    /* TRIPS TIMELINE (LAST 7 DAYS) */
+    const [tripsTimeline] = await pool.query(`
+      SELECT 
+      DATE(created_at) AS date,
+      DAYNAME(created_at) AS day,
+      COUNT(*) AS trips
+      FROM trips
+      WHERE created_at >= CURDATE() - INTERVAL 7 DAY
+      GROUP BY DATE(created_at), DAYNAME(created_at)
+      ORDER BY DATE(created_at);
+    `);
+
+    /* TOP COUNTRIES */
+    const [topCountries] = await pool.query(`
+      SELECT country, COUNT(*) users
+      FROM users
+      GROUP BY country
+      ORDER BY users DESC
+      LIMIT 5
+    `);
+
+    /* AVG TRIP DURATION */
+    const [[avgTrip]] = await pool.query(`
+      SELECT ROUND(AVG(DATEDIFF(end_date, start_date)), 1) avgDuration
+      FROM trips
+      WHERE end_date IS NOT NULL
+    `);
+
+    res.json({
+      totalUsers: users.total,
+      activeUsersToday: activeUsers.total,
+      totalTrips: trips.total,
+      avgTripDuration: avgTrip.avgDuration || 0,
+
+      statusStats,
+      popularCities,
+      tripsTimeline,
+      topCountries
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Analytics fetch failed" });
+  }
+});
+
 
 // Other routes
 app.post('/api/stops/:stopId/itinerary', authenticateToken, async (req, res) => {
@@ -690,40 +805,24 @@ app.post('/api/stops/:stopId/itinerary', authenticateToken, async (req, res) => 
   }
 });
 
-app.post('/api/trips/:tripId/budget', authenticateToken, async (req, res) => {
-  try {
-    if (!(await verifyTripOwner(req.params.tripId, req.user.user_id))) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
+// app.post('/api/trips/:tripId/budget', authenticateToken, async (req, res) => {
+//   try {
+//     if (!(await verifyTripOwner(req.params.tripId, req.user.user_id))) {
+//       return res.status(403).json({ error: 'Unauthorized' });
+//     }
 
-    const { category, estimated_amount, actual_amount, work } = req.body;
+//     const { category, estimated_amount, actual_amount, work } = req.body;
 
-    await pool.query(
-      `INSERT INTO budget_breakdown (trip_id, category, estimated_amount, actual_amount, work)
-       VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE estimated_amount=?, actual_amount=?, work=?`,
-      [req.params.tripId, category, estimated_amount, actual_amount, work, estimated_amount, actual_amount, work]
-    );
-    res.json({ message: 'Budget updated' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/community/trips', async (_, res) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT t.trip_id, t.trip_name, t.cover_photo, t.start_date, t.end_date,
-       u.first_name, u.last_name
-       FROM trips t JOIN users u ON t.user_id=u.user_id
-       WHERE t.is_public=TRUE ORDER BY t.created_at DESC LIMIT 50`
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+//     await pool.query(
+//       `INSERT INTO budget_breakdown (trip_id, category, estimated_amount, actual_amount, work)
+//        VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE estimated_amount=?, actual_amount=?, work=?`,
+//       [req.params.tripId, category, estimated_amount, actual_amount, work, estimated_amount, actual_amount, work]
+//     );
+//     res.json({ message: 'Budget updated' });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error' });
+//   }
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

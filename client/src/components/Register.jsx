@@ -16,7 +16,7 @@ export default function Register({ onBack }) {
   const fileInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
-    console.log('🔥 BUTTON WORKS!');
+    // console.log('BUTTON WORKS!');
     
     e.preventDefault();
     

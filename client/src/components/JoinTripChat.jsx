@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Send, Loader2, MapPin, ChevronLeft } from "lucide-react";
+import { Send, Loader2, MapPin, ChevronRight } from "lucide-react";
 
-export default function JoinTripChat({onJoin}) {
+export default function JoinTripChat({onJoin, onBack}) {
   const [tripId, setTripId] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +72,21 @@ export default function JoinTripChat({onJoin}) {
   };
 
   return (
+    <>
+    <header className="bg-white sticky top-0 z-20 border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Back
+          </h1>
+        </div>
+      </header>
+   
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full">
 
@@ -109,5 +124,6 @@ export default function JoinTripChat({onJoin}) {
         </p>
       </div>
     </div>
+    </>
   );
 }

@@ -55,11 +55,11 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
     if (!aiQuery.trim()) return;
     setLoadingAI(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/trips/${trip.trip_id}/ai-assistant`, {
+      const res = await fetch(`/api/trips/${trip.trip_id}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ query: aiQuery })
+        body: JSON.stringify({ userQuery: aiQuery })
       });
       const data = await res.json();
       setAiResponse(data.response);
@@ -215,7 +215,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
           </button>
 
           <button onClick={() => onNewStop(trip.trip_id)} className="flex items-center gap-1 px-3 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
-            <Plus size={14} /> New
+            <Plus size={14} /> Add Stop
           </button>
 
           <button onClick={handleDelete} className="flex items-center gap-1 px-3 py-2 text-xs bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">

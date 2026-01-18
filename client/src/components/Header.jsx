@@ -41,7 +41,7 @@ export default function Header({ onNavigate, onLogout }) {
               </button>
 
               <button
-                onClick={() => { onNavigate('admin'); setShowMenu(false); }}
+                onClick={() => { onNavigate('analytics'); setShowMenu(false); }}
                 className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-xl transition-all"
               >
                 <BarChart3 className="w-5 h-5" />
