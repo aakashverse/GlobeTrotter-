@@ -460,6 +460,7 @@ app.put('/api/trips/:id', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Add trip stop
 app.post('/api/trips/:id/stops', authenticateToken, async (req, res) => {
   try {
@@ -534,6 +535,7 @@ app.get('/api/trips/:id/stops', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // get chat
 app.get('/api/trips/:id/chat', authenticateToken, async (req, res) => {

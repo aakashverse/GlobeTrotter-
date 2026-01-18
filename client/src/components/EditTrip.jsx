@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom'; // If using react-router
 import useToast from '../hooks/useToast';
 
-export default function EditTrip({ onNavigate, token }) {
+export default function EditTrip({ onNavigate }) {
   const [trip, setTrip] = useState({});
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({});
@@ -23,25 +23,28 @@ export default function EditTrip({ onNavigate, token }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const res = await fetch(`/api/trips/${trip.trip_id}`, {
         method: 'PUT',
         headers: { 
-          'Authorization': `Bearer ${token}`,
+          Credentials: 'include',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
       });
 
       if (res.ok) {
-        showSuccess('Trip updated!');
-        onBack();
-      } else {
-        showError('Update failed');
+      showSuccess('Trip updated!');
+        // onBack();
       }
-    } catch (err) {
+    } catch(err){
+        showError('Update failed', err.message);
+      }
+    finally{
       showError('Update failed');
+      setLoading(false);
     }
   };
 

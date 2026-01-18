@@ -1,7 +1,6 @@
 import { Bot, Sparkles } from "lucide-react";
 
 export default function TripAI({
-  tripId,
   aiQuery,
   setAiQuery,
   aiResponse,

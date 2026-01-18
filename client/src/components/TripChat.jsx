@@ -180,7 +180,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
   return (
   <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-indigo-50">
     
-    {/* HEADER */}
+    {/* header */}
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 p-4 flex items-center gap-4 shadow-sm sticky top-0 z-10">
       <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
         <ChevronLeft size={20} />
@@ -196,13 +196,12 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
       </div>
     </header>
 
-    {/* MAIN CONTENT: CHAT + AI */}
+    {/* cchat+ai */}
     <div className="flex flex-1 overflow-hidden min-h-0">
 
-      {/* CHAT SECTION (LEFT) */}
       <div className="flex flex-col flex-1">
 
-        {/* MESSAGES */}
+        {/* msgs */}
         <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 py-20">
@@ -267,7 +266,6 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* INPUT */}
         <form
           onSubmit={sendMessage}
           className="bg-white/80 backdrop-blur-lg border-t border-gray-200/50 p-4 px-6 shadow-2xl"
@@ -306,7 +304,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
         </button>
       </div>
 
-      {/* TRIP AI (RIGHT) */}
+      {/* trip ai */}
       <div className="hidden lg:flex flex-col w-[360px] border-l bg-gradient-to-b from-indigo-50 to-purple-50">
         <div className="sticky top-[72px] h-[calc(100vh-72px)] overflow-y-auto p-4">
           <TripAI
@@ -321,26 +319,26 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
       </div>
     </div>
 
-    {/* MOBILE SLIDE-IN AI */}
+    {/* responsive views */}
 <div
   className={`fixed inset-0 z-50 lg:hidden transition-all duration-300
     ${showMobileAI ? "visible" : "invisible"}`}
 >
-  {/* BACKDROP */}
+ 
   <div
     onClick={() => setShowMobileAI(false)}
     className={`absolute inset-0 bg-black/40 transition-opacity
       ${showMobileAI ? "opacity-100" : "opacity-0"}`}
   />
 
-  {/* PANEL */}
+  
   <div
     className={`absolute right-0 top-0 h-full w-[90%] max-w-sm
       bg-gradient-to-b from-indigo-50 to-purple-50
       shadow-2xl transform transition-transform duration-300
       ${showMobileAI ? "translate-x-0" : "translate-x-full"}`}
   >
-    {/* HEADER */}
+    
     <div className="flex items-center justify-between p-4 border-b">
       <h3 className="font-bold text-gray-900">Trip AI</h3>
       <button
@@ -351,7 +349,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
       </button>
     </div>
 
-    {/* AI CONTENT */}
+    
     <div className="h-[calc(100%-56px)] p-4">
       <TripAI
         tripId={tripId}

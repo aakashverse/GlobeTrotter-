@@ -26,8 +26,8 @@ export default function MyTrips({ onNavigate, user }) {
     }
   };
   
-  const handleEditTrip = (trip) => {
-    onNavigate(`/trips/${trip.trip_id}/edit`, {trip});
+  const handleEditTrip = (tripId) => {
+    onNavigate(`/trips/${tripId}/edit`, {tripId});
   };
 
   const handleNewStop = (tripId) => {
@@ -39,18 +39,18 @@ export default function MyTrips({ onNavigate, user }) {
       try {
         setLoading(true);
 
-        // ✅ 1. Owned trips only
+        // Owned trips only
         const ownedRes = await fetch("/api/trips", {
           credentials: 'include'
         });
         if(!ownedRes.ok) throw new Error('Failed to fetch owned trips');
         const ownedData = await ownedRes.json();
 
-        // ✅ 2. ALL trips (owned + joined) - Use correct endpoint
+        // all trips (owned + joined) 
         const allRes = await fetch(`/api/users/${user.user_id}/trips`, {
           credentials: 'include'
         });
-        if(!allRes.ok) throw new Error('Failed to fetch all trips');  // ✅ Fixed
+        if(!allRes.ok) throw new Error('Failed to fetch all trips');  // 
         const allData = await allRes.json();
 
         setTrips(Array.isArray(ownedData) ? ownedData : []);
@@ -66,14 +66,14 @@ export default function MyTrips({ onNavigate, user }) {
       }
     };
     
-    // ✅ FIXED: Check user exists (from login cookie)
+    // check user exists (from login cookie)
     if(user) {
       fetchAllTrips();
     } else {
       onNavigate('login');
       setLoading(false);
     }
-  }, [user, onNavigate]);  // ✅ Use user prop instead of undefined token
+  }, [user, onNavigate]);  
 
   const filteredTrips = myTrips.filter(trip =>
     trip.trip_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

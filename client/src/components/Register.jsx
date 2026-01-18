@@ -16,7 +16,7 @@ export default function Register({ onBack }) {
   const fileInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
-    // console.log('BUTTON WORKS!');
+    // console.log('btn works!');
     
     e.preventDefault();
     
@@ -85,7 +85,6 @@ export default function Register({ onBack }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ALL your existing input fields - unchanged */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
@@ -109,7 +108,6 @@ export default function Register({ onBack }) {
             </div>
           </div>
 
-          {/* Add rest of your inputs here - same as before */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input

@@ -41,8 +41,7 @@ export default function Analytics({ onBack }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-
-      {/* HEADER */}
+      
       <header className="bg-white sticky top-0 z-20 border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
@@ -59,7 +58,7 @@ export default function Analytics({ onBack }) {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-10">
 
-        {/* METRIC CARDS */}
+        {/* header cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Stat title="🔥 Active Today" value={analytics.activeUsersToday} />
           <Stat title="📈 Total Trips" value={analytics.totalTrips} />
@@ -67,10 +66,10 @@ export default function Analytics({ onBack }) {
           <Stat title="⏱ Avg Duration (days)" value={analytics.avgTripDuration} />
         </div>
 
-        {/* WEEKLY GROWTH + STATUS */}
+        {/* weekly growth */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* WEEKLY TRIPS */}
+          {/* weekly trips */}
           <div className="bg-white p-6 rounded-2xl shadow">
             <h3 className="font-bold mb-4">📈 Trips Growth (Weekly)</h3>
             <ResponsiveContainer width="100%" height={260}>
@@ -88,7 +87,7 @@ export default function Analytics({ onBack }) {
             </ResponsiveContainer>
           </div>
 
-          {/* TRIPS BY STATUS */}
+          {/* trips acc. to status */}
           <div className="bg-white p-6 rounded-2xl shadow">
             <h3 className="font-bold mb-6 text-center">
               ⏳ Trips by Status
@@ -96,7 +95,7 @@ export default function Analytics({ onBack }) {
 
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
 
-              {/* PIE */}
+              {/* piee chart */}
               <div className="relative w-full max-w-[260px]">
                 <PieChart width={260} height={260}>
                   <Pie
@@ -127,7 +126,7 @@ export default function Analytics({ onBack }) {
                 </div>
               </div>
 
-              {/* LEGEND */}
+              {/* pie's legend */}
               <div className="w-full max-w-xs space-y-3">
                 {analytics.statusStats.map((stat, i) => (
                   <div
@@ -154,10 +153,10 @@ export default function Analytics({ onBack }) {
           </div>
         </div>
 
-        {/* POPULAR CITIES & COUNTRIES */}
+        {/* pop cities & countries */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* POPULAR CITIES */}
+          {/* cities */}
           <div className="bg-white p-6 rounded-2xl shadow">
             <h3 className="font-bold mb-4">🌍 Popular Cities</h3>
             <ResponsiveContainer width="100%" height={260}>
@@ -170,7 +169,7 @@ export default function Analytics({ onBack }) {
             </ResponsiveContainer>
           </div>
 
-          {/* TOP COUNTRIES */}
+          {/* {countries} */}
           <div className="bg-white p-6 rounded-2xl shadow">
             <h3 className="font-bold mb-4">🌍 Top Countries</h3>
             <ResponsiveContainer width="100%" height={260}>

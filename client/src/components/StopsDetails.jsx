@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, MapPin, DollarSign, User, Clock, Users, Tag, CalendarDays } from "lucide-react";
 import useToast from "../hooks/useToast";
 
-export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) {
+export default function StopDetails({ stop, tripId, onBack, onEdit }) {
   const [showActions, setShowActions] = useState(false);
   const { showSuccess, showError } = useToast();
 
@@ -84,7 +84,7 @@ export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) 
       {/* Schema Cards */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         
-        {/* 1. Main Info Card */}
+        {/* Main Info Card */}
         <div className="bg-white rounded-2xl shadow-sm border p-8">
           <div className="flex items-start gap-6 pb-6 border-b mb-6">
             <div className="flex-shrink-0">
@@ -122,7 +122,7 @@ export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) 
           </div>
         </div>
 
-        {/* 2. Activities Card */}
+        {/* Activities Card */}
         <div className="bg-white rounded-2xl shadow-sm border p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             📋 Activities / Notes
@@ -132,7 +132,7 @@ export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) 
           </div>
         </div>
 
-        {/* 3. Financial Card */}
+        {/* Financial Card */}
         <div className="bg-white rounded-2xl shadow-sm border p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <DollarSign className="w-6 h-6 text-emerald-500" />
@@ -162,7 +162,7 @@ export default function StopDetails({ stop, tripId, onBack, onEdit, onDelete }) 
           </div>
         </div>
 
-        {/* 4. Technical Info Card */}
+        {/* Technical Info Card */}
         <div className="bg-slate-50 rounded-2xl p-6 border">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Technical Info</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

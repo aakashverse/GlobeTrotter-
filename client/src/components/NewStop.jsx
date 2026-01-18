@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Plus, MapPin, DollarSign, Users, X } from 'lucide-react';
 import useToast from '../hooks/useToast';
-import StopDetails from './StopsDetails';
 
 export default function NewStop({ tripId, onBack }) {
   const [formData, setFormData] = useState({

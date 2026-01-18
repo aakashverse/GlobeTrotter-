@@ -7,7 +7,7 @@ export default function Popular({ onBack, showToast }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const toastId = showToast('Loading popular spots...', 'info');
+    // const toastId = showToast('Loading popular spots...', 'info');
     fetch("https://api.api-ninjas.com/v1/city?limit=5&min_population=1000000&country=US,GB,FR,IT,ES,JP,AU")
       .then(res => {
          if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.status.Text}`);
