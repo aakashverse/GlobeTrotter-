@@ -183,7 +183,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
             disabled={loadingStops}
           >
             <Pin size={14} />
-            {stops.length} Stop{stops.length !== 1 ? 's' : ''} Details
+             Stops Details
           </button>
         </div>
 
@@ -307,7 +307,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{trip.trip_name} Stops</h2>
                 <p className="text-gray-600">{stops.length} stops</p>
-              </div>
+              </div> 
               <button
                 onClick={toggleStopsModal}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-all"
