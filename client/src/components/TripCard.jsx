@@ -13,11 +13,13 @@ import {
   Sparkles
 } from "lucide-react";
 import StopDetails from "./StopsDetails";
+import EditTripModal from "./EditTrip";
 
-export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }) {  
+export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate }) {  
   const [stops, setStops] = useState([]);  
   const [showStopsModal, setShowStopsModal] = useState(false);  
   const [loadingStops, setLoadingStops] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [tripMates, setTripMates] = useState([]);
   
   // ai states
@@ -118,8 +120,9 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
     }
   };
 
-  const handleEdit = () => {
-    onEditTrip(trip);
+  const handleEdit = (e) => {
+    e?.stopPropagation();
+    setShowEditModal(true);
   };
 
   const toggleStopsModal = () => {
@@ -213,6 +216,7 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
           <button onClick={handleEdit} className="flex items-center gap-1 px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
             <Pencil size={14} /> Edit
           </button>
+
 
           <button onClick={() => onNewStop(trip.trip_id)} className="flex items-center gap-1 px-3 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
             <Plus size={14} /> Add Stop
@@ -318,10 +322,21 @@ export default function TripCard({ trip, onDelete, onEditTrip, onNewStop, role }
             
             {/* Modal Content */}
             <div className="max-h-96 overflow-auto p-6">
-              <StopDetails stops={stops} loading={loadingStops} tripId={trip.trip_id} />
+              <StopDetails stops={stops} tripId={trip.trip_id} />
             </div>
           </div>
         </div>
+      )}
+
+      {showEditModal && (
+          <EditTripModal
+            trip={trip}
+            onClose={() => setShowEditModal(false)}
+            onUpdated={ (updatedTrip) => {
+              onTripUpdate(updatedTrip);
+              setShowEditModal(false);
+            }}
+          />
       )}
     </>
   );

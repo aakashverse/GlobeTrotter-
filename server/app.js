@@ -155,7 +155,7 @@ if (!fs.existsSync('uploads')) {
 
 // Middleware - PERFECT ORDER
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://globetrotter-lwai.onrender.com'],
   credentials: true
 }));
 

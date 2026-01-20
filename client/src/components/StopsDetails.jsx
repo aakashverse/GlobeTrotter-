@@ -1,6 +1,4 @@
 import {
-  ChevronLeft,
-  Clock,
   IndianRupee,
   Edit3,
   Trash2,
@@ -8,7 +6,7 @@ import {
   CalendarDays
 } from "lucide-react";
 
-export default function StopDetails({ stops = [], onEdit, onDelete }) {
+export default function StopDetails({ stops = [], tripId }) {
 
   if (!stops.length) {
     return <div className="p-10 text-center text-gray-500">No stops available</div>;
@@ -79,13 +77,13 @@ export default function StopDetails({ stops = [], onEdit, onDelete }) {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => onEdit?.(stop)}
+                    onClick={() => handleEdit}
                     className="p-1.5 hover:bg-blue-50 rounded-md text-blue-600"
                   >
                     <Edit3 size={14} />
                   </button>
                   <button
-                    onClick={() => onDelete?.(s.id)}
+                    onClick={() => handleDelete}
                     className="p-1.5 hover:bg-red-50 rounded-md text-red-600"
                   >
                     <Trash2 size={14} />

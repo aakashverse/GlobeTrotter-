@@ -3,7 +3,7 @@ import { ChevronRight, Search, MapPin } from "lucide-react";
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
 
-export default function MyTrips({ onNavigate, user }) {
+export default function MyTrips({ onNavigate, user, updatedTrip }) {
   const [trips, setTrips] = useState([]);
   const [myTrips, setMyTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +25,12 @@ export default function MyTrips({ onNavigate, user }) {
       showError('Delete failed');
     }
   };
-  
-  const handleEditTrip = (tripId) => {
-    onNavigate(`/trips/${tripId}/edit`, {tripId});
-  };
+
+  const handleTripUpdate = (updatedTrip) => {
+    setTrips(prev =>
+      prev.map(trip => trip.trip_id === updatedTrip.trip_id ? updatedTrip : trip)
+    )
+  }
 
   const handleNewStop = (tripId) => {
     onNavigate(`/trips/${tripId}/new-stop`);
@@ -137,8 +139,8 @@ export default function MyTrips({ onNavigate, user }) {
                 trip={trip}
                 role={trip.role || 'owner'}
                 onDelete={handleDeleteTrip}
-                onEditTrip={handleEditTrip}
                 onNewStop={handleNewStop}
+                onTripUpdate={handleTripUpdate}
               />
             ))}
           </div>
