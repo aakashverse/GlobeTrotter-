@@ -22,10 +22,11 @@ const openai = new OpenAI({
 });
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.MYSQLHOST || process.env.DB_HOST,
+  user: process.env.MYSQLUSER || process.env.DB_USER,
+  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
+  database: process.env.MYSQLDATABASE || process.env.DB_NAME,
+  port: process.env.MYSQLPORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -33,13 +34,13 @@ const pool = mysql.createPool({
 
 // DB test
 async function testDB() {
-  try {
-    const [rows] = await pool.query('SELECT 1+1 AS result');
-    console.log('DB connected:', rows[0]);
-  } catch (err) {
-    console.error('DB connection failed:', err);
-    process.exit(1); 
-  }
+    try {
+      const conn = await pool.getConnection();
+      console.log("MySQL connected");
+      conn.release();
+    } catch (err) {
+      console.error("MySQL not ready yet");
+    }
 }
 testDB();
 
@@ -61,7 +62,7 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: ["http://localhost:5173", "http://localhost:3000",  "https://globetrotter-lwai.onrender.com" ],
     credentials: true,
     methods: ["GET", "POST"],
   }
