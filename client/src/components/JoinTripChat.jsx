@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Send, Loader2, MapPin, ChevronRight } from "lucide-react";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function JoinTripChat({onJoin, onBack}) {
   const [tripId, setTripId] = useState("");
@@ -23,7 +24,7 @@ export default function JoinTripChat({onJoin, onBack}) {
       // console.log("1. Joining trip", id);
       
       // join trip
-      const joinRes = await fetch(`/api/trips/${id}/join`, {
+      const joinRes = await fetch(`${API_BASE}/api/trips/${id}/join`, {
         method: 'POST',
         credentials: 'include',
         headers: {

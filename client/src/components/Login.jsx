@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Plane } from "lucide-react";
-import useToast from "../hooks/useToast"; 
+import useToast from "../hooks/useToast";
+const API_BASE = import.meta.env.VITE_API_URL;
+
 
 export default function Login({ onLogin, onRegister }) { 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const { showSuccess, showError } = useToast(); 
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     // if(isSubmitting) return;
-
+    
     if (!formData.email || !formData.password) {
       showError("Please enter email and password");
       return;
@@ -20,14 +22,23 @@ export default function Login({ onLogin, onRegister }) {
     // const toastId = showLoading("Signing you in..."); 
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(formData),
       });
+      
+      console.log(import.meta.env.VITE_API_URL);
+      const text = await response.text();
+      let data = {};
 
-      const data = await response.json();
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (err) {
+        console.error("Invalid JSON from backend:", text);
+        throw new Error("Server returned invalid response");
+      }
 
       if (!response.ok) {
         throw new Error(data.message || "Login failed");

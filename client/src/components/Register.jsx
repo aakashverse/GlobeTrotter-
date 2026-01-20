@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import { User } from "lucide-react";
+import useToast from "../hooks/useToast"; 
+const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function Register({ onBack }) {
   const [formData, setFormData] = useState({
@@ -14,6 +16,7 @@ export default function Register({ onBack }) {
   });
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const { showSuccess, showError } = useToast(); 
 
   const handleSubmit = async (e) => {
     // console.log('btn works!');
@@ -50,7 +53,7 @@ export default function Register({ onBack }) {
 
       console.log('Sending...');
       
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         body: form
       });
@@ -60,15 +63,15 @@ export default function Register({ onBack }) {
       console.log('Data:', data);
       
       if (data.success) {
-        alert('Registered successfully!');
+        showSuccess('Registered successfully!');
         onBack();
       } else {
-        alert(data.message || 'Registration failed');
+        showError(data.message || 'Registration failed');
       }
       
     } catch (err) {
       console.error('Error:', err);
-      alert('Network error');
+      showError('Network error');
     } finally {
       setLoading(false);
     }
