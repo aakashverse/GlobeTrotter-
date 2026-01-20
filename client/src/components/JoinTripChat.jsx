@@ -42,7 +42,7 @@ export default function JoinTripChat({onJoin, onBack}) {
       // console.log("Joined trip successfully");
 
       //  Verify access & get trip data
-      const verifyRes = await fetch(`/api/trips/${id}`, {
+      const verifyRes = await fetch(`${API_BASE}/api/trips/${id}`, {
         credentials: 'include',
       });
 
