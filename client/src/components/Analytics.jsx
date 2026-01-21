@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import Stat from "./Stat";
 import { ChevronRight } from "lucide-react";
 
+const baseURL = import.meta.env.VITE_API_URL;
 const COLORS = ["#22c55e", "#f97316", "#3b82f6", "#a855f7"];
 
 export default function Analytics({ onBack }) {
@@ -22,7 +23,7 @@ export default function Analytics({ onBack }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/analytics', { credentials: "include" })
+    fetch(`${baseURL}/api/admin/analytics`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         setAnalytics(data);

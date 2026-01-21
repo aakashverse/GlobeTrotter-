@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { useState, useEffect } from 'react';
+const baseURL = import.meta.env.VITE_API_URL;
 
 export default function Dashboard({ user, onNavigate }) {
   const [previousTrips, setPreviousTrips] = useState([]);
@@ -28,7 +29,7 @@ export default function Dashboard({ user, onNavigate }) {
   useEffect(() => {
   const fetchTrips = async () => {
     try {
-      const res = await fetch(`/api/trips?userId=${user.id}`, {
+      const res = await fetch(`${baseURL}/api/trips?userId=${user.id}`, {
         credentials: "include"
       });
       const data = await res.json();

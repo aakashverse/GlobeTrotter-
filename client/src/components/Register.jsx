@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { User } from "lucide-react";
 import useToast from "../hooks/useToast"; 
+const baseURL = import.meta.env.VITE_API_URL;
 
 export default function Register({ onBack }) {
   const [formData, setFormData] = useState({
@@ -52,7 +53,7 @@ export default function Register({ onBack }) {
 
       console.log('Sending...');
       
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${baseURL}/api/auth/register`, {
         method: 'POST',
         body: form
       });
