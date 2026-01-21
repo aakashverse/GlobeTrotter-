@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+const baseURL = import.meta.env.VITE_API_URL;
 
 export default function useAuth() {
   const [user, setUser] = useState(null);
@@ -9,7 +10,7 @@ export default function useAuth() {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const res = await fetch('/api/auth/status', {
+        const res = await fetch(`${baseURL}/api/auth/status`, {
           method: "GET",
           credentials: "include",
         });
@@ -37,7 +38,7 @@ export default function useAuth() {
 
   const logout = async () => {
     try{
-      await fetch('/api/auth/logout', {
+      await fetch(`${baseURL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
