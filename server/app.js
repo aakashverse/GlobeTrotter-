@@ -21,20 +21,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// const dbUrl = process.env.DATABASE_URL;
-// if (!dbUrl) {
-//   throw new Error("DATABASE_URL not set");
-// }
-
 // db setup
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const pool = mysql.createPool(process.env.DATABASE_URL);
+// const pool = mysql.createPool({
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME || DATABASE_URL,
+//   waitForConnections: true,
+//   connectionLimit: 10,
+// });
 
 // DB test
 async function testDB() {
