@@ -21,20 +21,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) {
-  throw new Error("DATABASE_URL not set");
-}
+// const dbUrl = process.env.DATABASE_URL;
+// if (!dbUrl) {
+//   throw new Error("DATABASE_URL not set");
+// }
 
-const parsed = new URL(dbUrl);
-
+// db setup
 const pool = mysql.createPool({
-  host: parsed.hostname,
-  user: parsed.username,
-  password: parsed.password,
-  database: parsed.pathname.replace("/", ""),
-  port: Number(parsed.port),
-  ssl: { rejectUnauthorized: false },
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
 });
@@ -69,9 +66,9 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000",  "https://globetrotter-lwai.onrender.com" ],
+    origin: ["http://localhost:5173", "http://localhost:3000",  process.env.CLIENT_URL ],
     credentials: true,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
   }
 });
 
@@ -163,8 +160,9 @@ if (!fs.existsSync('uploads')) {
 
 // Middleware - PERFECT ORDER
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://globetrotter-lwai.onrender.com'],
-  credentials: true
+  origin: ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -836,5 +834,5 @@ app.post('/api/stops/:stopId/itinerary', authenticateToken, async (req, res) => 
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server + Socket.IO running on ${PORT}`);
+  console.log(`Server running on ${PORT}`);
 });

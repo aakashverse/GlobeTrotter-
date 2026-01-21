@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Plus, MapPin, DollarSign, Users, X } from 'lucide-react';
 import useToast from '../hooks/useToast';
-const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function NewStop({ tripId, onBack }) {
   const [formData, setFormData] = useState({
@@ -29,7 +28,7 @@ export default function NewStop({ tripId, onBack }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/trips/${tripId}/stops`, {
+      const res = await fetch(`/api/trips/${tripId}/stops`, {
         method: 'POST',
         credentials: 'include',
         headers: { 

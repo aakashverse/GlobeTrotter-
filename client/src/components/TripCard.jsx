@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import StopDetails from "./StopsDetails";
 import EditTripModal from "./EditTrip";
-const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate }) {  
   const [stops, setStops] = useState([]);  
@@ -58,7 +57,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
     if (!aiQuery.trim()) return;
     setLoadingAI(true);
     try {
-      const res = await fetch(`${API_BASE}/api/trips/${trip.trip_id}/ai-assistant`, {
+      const res = await fetch(`/api/trips/${trip.trip_id}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -85,7 +84,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
   // fetch tripamtes
   const fetchTripMates = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/trips/${trip.trip_id}/mates`, {
+    const res = await fetch(`/api/trips/${trip.trip_id}/mates`, {
       credentials: 'include'
     });
     if (res.ok) {
@@ -100,7 +99,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
   const fetchStops = async () => {
     setLoadingStops(true);
     try {
-      const res = await fetch(`${API_BASE}/api/trips/${trip.trip_id}/stops`, {
+      const res = await fetch(`/api/trips/${trip.trip_id}/stops`, {
         credentials: 'include'
       });
       if (res.ok) {

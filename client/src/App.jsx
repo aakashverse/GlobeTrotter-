@@ -26,7 +26,7 @@ export default function App() {
   const [currentTrip, setCurrentTrip] = useState(null); 
   const [currentTripId, setCurrentTripId] = useState(null);
   const [chatTripId, setChatTripId] = useState(null);
-  const { user, isAuthenticated, authReady, login, logout } = useAuth();
+  const { user, isAuthenticated, authReady, login } = useAuth();
   const {showSuccess} = useToast();
 
   // Automatically go to dashboard after refresh if user is logged in

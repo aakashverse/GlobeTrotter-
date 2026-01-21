@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import useToast from "../hooks/useToast";
 import City from "./City";
-const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function NewTrip({ onBack, onCreateTrip }) {
   const [formData, setFormData] = useState({
@@ -105,7 +104,7 @@ export default function NewTrip({ onBack, onCreateTrip }) {
     console.log("DB submit data:", submitData);
 
     try {
-      const res = await fetch(`${API_BASE}/api/trips`, {
+      const res = await fetch('/api/trips', {
         method: "POST",
         credentials: 'include',
         headers: {

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { ChevronRight, Search, MapPin } from "lucide-react"; 
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
-const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function MyTrips({ onNavigate, user, updatedTrip }) {
   const [trips, setTrips] = useState([]);
@@ -13,7 +12,7 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
 
   const handleDeleteTrip = async (tripId) => {
     try {
-      const res = await fetch(`${API_BASE}/api/trips/${tripId}`, {
+      const res = await fetch(`/api/trips/${tripId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -34,7 +33,7 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
   }
 
   const handleNewStop = (tripId) => {
-    onNavigate(`${API_BASE}/trips/${tripId}/new-stop`);
+    onNavigate(`/trips/${tripId}/new-stop`);
   };
 
   useEffect(() => {
@@ -43,14 +42,14 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
         setLoading(true);
 
         // Owned trips only
-        const ownedRes = await fetch(`${API_BASE}/api/trips`, {
+        const ownedRes = await fetch('/api/trips', {
           credentials: 'include'
         });
         if(!ownedRes.ok) throw new Error('Failed to fetch owned trips');
         const ownedData = await ownedRes.json();
 
         // all trips (owned + joined) 
-        const allRes = await fetch(`${API_BASE}/api/users/${user.user_id}/trips`, {
+        const allRes = await fetch(`/api/users/${user.user_id}/trips`, {
           credentials: 'include'
         });
         if(!allRes.ok) throw new Error('Failed to fetch all trips');  // 

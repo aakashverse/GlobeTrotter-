@@ -1,7 +1,6 @@
 import { X, Save } from "lucide-react";
 import { useState } from "react";
 import useToast from "../hooks/useToast";
-const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function EditTripModal({ trip, onClose, onUpdated }) {
   const [form, setForm] = useState({
@@ -22,7 +21,7 @@ export default function EditTripModal({ trip, onClose, onUpdated }) {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/trips/${trip.trip_id}`, {
+      const res = await fetch(`$/api/trips/${trip.trip_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
