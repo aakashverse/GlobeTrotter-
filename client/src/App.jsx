@@ -6,7 +6,6 @@ import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import CreateTrip from "./components/NewTrip";
 import MyTrip from "./components/MyTrip";
-import Itinerary from "./components/Itinerary";
 import Profile from "./components/Profile";
 import City from "./components/City";
 import Calendar from "./components/Calender";
@@ -17,9 +16,11 @@ import EditTrip from "./components/EditTrip";
 import NewStop from "./components/NewStop";
 import JoinTripChat from "./components/JoinTripChat";
 import TripChat from "./components/TripChat";
+import ItineraryBuilder from "./components/ItineraryBuilder";
 
 import useAuth from "./hooks/useAuth";
 import useToast from "./hooks/useToast";
+import ExpenseDashboard from "./components/Expense";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState("login");
@@ -76,6 +77,14 @@ export default function App() {
       setCurrentScreen('trip-ai');
     } else if (path === 'analytics'){
       setCurrentScreen('analytics');
+    } else if(path.includes('itinerary')){
+      const tripId = path.split('/')[2];  
+      setCurrentScreen('build-itinerary');
+      setCurrentTripId(tripId);
+    } else if(path.includes('expenses')){
+      const tripId = path.split('/')[2];  
+      setCurrentScreen('expense');
+      setCurrentTrip(tripId)
     } else {
       setCurrentScreen(path.replace('/', '')); // Handle other paths
     }
@@ -131,7 +140,10 @@ export default function App() {
         )}
 
         {currentScreen === "build-itinerary" && (
-          <Itinerary onBack={() => setCurrentScreen("my-trips")} />
+          <ItineraryBuilder 
+          onBack={() => setCurrentScreen("my-trips")} 
+          tripId={currentTripId}
+          />
         )}
 
         {currentScreen === "join-chat" && (
@@ -182,6 +194,15 @@ export default function App() {
       {/* New Stop Screen */} 
         {currentScreen === "new-stop" && (
           <NewStop 
+            tripId={currentTripId}
+            onNavigate={handleNavigate}
+            onBack={() => setCurrentScreen("my-trips")}
+           />
+        )}
+         
+        {/*expense */}
+        {currentScreen === "expense" && (
+          <ExpenseDashboard 
             tripId={currentTripId}
             onNavigate={handleNavigate}
             onBack={() => setCurrentScreen("my-trips")}

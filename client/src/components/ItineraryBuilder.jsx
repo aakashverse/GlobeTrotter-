@@ -245,11 +245,11 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                       className="px-3 py-2 border rounded-md text-sm bg-white"
                     >
                       <option value="sightseeing">🏛️ Sightseeing</option>
-                      <option value="food">🍽️ Food</option>
-                      <option value="hotel">🏨 Hotel</option>
-                      <option value="transport">✈️ Transport</option>
+                      <option value="food & Drinks">🍽️ Food & Drinks</option>
+                      <option value="stay">🏨 Stay</option>
+                      <option value="transport">🚕 Transport</option>
                       <option value="shopping">🛍️ Shopping</option>
-                      <option value="shopping">Others</option>
+                      <option value="others">Others</option>
                     </select>
                     
                     <input

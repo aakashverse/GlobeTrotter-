@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plane } from "lucide-react";
 import useToast from "../hooks/useToast";
-const baseURL = import.meta.env.VITE_API_URL;
+// const baseURL = import.meta.env.VITE_API_URL;
 
 export default function Login({ onLogin, onRegister }) { 
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -21,7 +21,7 @@ export default function Login({ onLogin, onRegister }) {
     // const toastId = showLoading("Signing you in..."); 
 
     try {
-      const response = await fetch(`${baseURL}/api/auth/login`, {
+      const response = await fetch('/api/auth/login', {
         method: "POST",
         credentials: "include",
         headers: {'Content-Type': 'application/json'},

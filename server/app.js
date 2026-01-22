@@ -21,16 +21,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// db setup
-const pool = mysql.createPool(process.env.DATABASE_URL);
-// const pool = mysql.createPool({
-//   host: process.env.DB_HOST,
-//   user: process.env.DB_USER,
-//   password: process.env.DB_PASSWORD,
-//   database: process.env.DB_NAME || DATABASE_URL,
-//   waitForConnections: true,
-//   connectionLimit: 10,
-// });
+// const dbUrl = process.env.DATABASE_URL;
+// if (!dbUrl) {
+//   throw new Error("DATABASE_URL not set");
+// }
+
+// db
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+});
 
 // DB test
 async function testDB() {
@@ -468,7 +472,7 @@ app.post('/api/trips/:id/stops', authenticateToken, async (req, res) => {
   try {
     const tripId = req.params.id;
     const userId = req.user.user_id;
-    const { stop_name, work, amount_spent, paid_by } = req.body;
+    const { stop_name, stop_activities, amount_spent, paid_by } = req.body;
     const amount = parseFloat(amount_spent) || 0;
     
     const [tripRows] = await pool.query('SELECT * FROM trips WHERE trip_id = ?', [tripId]);
@@ -493,9 +497,9 @@ app.post('/api/trips/:id/stops', authenticateToken, async (req, res) => {
     const stopOrder = (maxOrderRows[0]?.next_order || 0) + 1;
 
     const [result] = await pool.query(
-      `INSERT INTO trip_stops (trip_id, stop_name, work, amount_spent, paid_by, stop_order)
+      `INSERT INTO trip_stops (trip_id, stop_name, stop_activities, amount_spent, paid_by, stop_order)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [tripId, stop_name, work, amount, paid_by, stopOrder]
+      [tripId, stop_name, stop_activities, amount, paid_by, stopOrder]
     );
 
     const [newStopRows] = await pool.query('SELECT * FROM trip_stops WHERE stop_id = ?', [result.insertId]);
@@ -511,30 +515,34 @@ app.get('/api/trips/:id/stops', authenticateToken, async (req, res) => {
     const tripId = req.params.id;
     const userId = req.user.user_id;
 
-    const [rows] = await pool.query(
-      `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order ASC`,
-      [tripId]
-    );
-    
-    const [tripRows] = await pool.query('SELECT * FROM trips WHERE trip_id = ?', [tripId]);
-    const trip = tripRows[0];
-    if (!trip) return res.status(404).json({ error: 'Trip not found' });
-
-    const [mateRows] = await pool.query(
-      `SELECT 1 FROM trip_mates WHERE trip_id = ? AND mate_name = ?`,
-      [tripId, req.user.first_name + ' ' + req.user.last_name]
-    );
-
-    const isOwner = trip.user_id === userId;
-    const isMate = mateRows.length > 0;
-    
     if (!(await isTripMember(tripId, req.user))) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // const [rows] = await pool.query(
+    //   `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order ASC`,
+    //   [tripId]
+    // );
+    
+    const [rows] = await pool.query(
+      `SELECT stop_id, trip_id, stop_name, stop_activities, amount_spent, paid_by, grand_total, stop_order, created_at 
+       FROM trip_stops 
+       WHERE trip_id = ? 
+       ORDER BY stop_order ASC, created_at ASC`,
+      [tripId]
+    );
+    // const trip = tripRows[0];
+    // if (!trip) return res.status(404).json({ error: 'Trip not found' });
+ 
+    // const [mateRows] = await pool.query(
+    //   `SELECT 1 FROM trip_mates WHERE trip_id = ? AND mate_name = ?`,
+    //   [tripId, req.user.first_name + ' ' + req.user.last_name]
+    // );
+    
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Stops routy error:', err);
+    res.status(500).json({ error: 'IFailed to fetch stops' });
   }
 });
 
@@ -792,22 +800,104 @@ app.get("/api/admin/analytics", authenticateToken, async (req, res) => {
   }
 });
 
+// get itinerary
+app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
+  const [stops] = await pool.query(`
+    SELECT * 
+    FROM trip_stops 
+    WHERE trip_id = ? 
+    ORDER BY stop_order
+  `, [req.params.id]);
+  
+  // Parse JSON activities column
+  const stopsWithActivities = stops.map(stop => ({
+    ...stop,
+    stop_activities: JSON.parse(stop.stop_activities || '[]')  // ✅ Direct JSON parse
+  }));
+  
+  res.json({ stops: stopsWithActivities });
+});
 
-// Other routes
-app.post('/api/stops/:stopId/itinerary', authenticateToken, async (req, res) => {
+// new itinerary
+app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
+  const { stops } = req.body;
+  
   try {
-    const { activity_name, day_number, activity_time, estimated_cost, work, item_order } = req.body;
-    const [r] = await pool.query(
-      `INSERT INTO itinerary_items (stop_id, activity_name, day_number, activity_time, estimated_cost, work, item_order)
-       VALUES (?,?,?,?,?,?,?)`,
-      [req.params.stopId, activity_name, day_number, activity_time, estimated_cost, work, item_order]
-    );
-    res.status(201).json({ itinerary_id: r.insertId });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    // Clear existing stops
+    await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [req.params.tripId]);
+    
+    // Insert new stops with activities as JSON
+    for (let i = 0; i < stops.length; i++) {
+      await pool.query(
+        'INSERT INTO trip_stops (trip_id, city, start_date, end_date, budget, stop_order, stop_activities) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          req.params.tripId, 
+          stops[i].city, 
+          stops[i].startDate, 
+          stops[i].endDate, 
+          stops[i].budget || 0, 
+          i,
+          JSON.stringify(stops[i].stop_activities || []) 
+        ]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Itinerary save error:', error);
+    res.status(500).json({ error: 'Failed to save itinerary' });
   }
 });
+
+// expense and budget
+app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
+  const { tripId } = req.params;
+
+  try {
+    const [expenses] = await pool.query(
+      `SELECT * FROM expenses 
+       WHERE trip_id = ?
+       ORDER BY expense_date DESC`,
+      [tripId]
+    );
+
+    const [[summary]] = await pool.query(
+      `SELECT SUM(amount) totalSpent FROM expenses WHERE trip_id = ?`,
+      [tripId]
+    );
+
+    const [byCategory] = await pool.query(
+      `SELECT category, SUM(amount) total
+       FROM expenses
+       WHERE trip_id = ?
+       GROUP BY category`,
+      [tripId]
+    );
+
+    const [byDate] = await pool.query(
+      `SELECT expense_date AS date, SUM(amount) total
+       FROM expenses
+       WHERE trip_id = ?
+       GROUP BY expense_date
+       ORDER BY expense_date`,
+      [tripId]
+    );
+
+    res.json({
+      expenses,
+      analytics: {
+        totalSpent: summary.totalSpent || 0,
+        byCategory,
+        byDate
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load expenses' });
+  }
+});
+
+
 
 // app.post('/api/trips/:tripId/budget', authenticateToken, async (req, res) => {
 //   try {

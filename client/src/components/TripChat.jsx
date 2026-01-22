@@ -3,7 +3,7 @@ import { Send, ScrollText, ChevronLeft, Bot } from "lucide-react";
 import { io } from "socket.io-client";
 import useToast from "../hooks/useToast";
 import TripAI from "./TripAI";
-const baseURL = import.meta.env.VITE_API_URL;
+// const baseURL = import.meta.env.VITE_API_URL;
 
 export default function TripChat({ tripId, userId, firstName, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -27,7 +27,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
     setAiResponse(''); // Clear previous response
     
     try {
-      const res = await fetch(`${baseURL}/api/trips/${tripId}/ai-assistant`, {
+      const res = await fetch(`/api/trips/${tripId}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -57,7 +57,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`${baseURL}/api/trips/${tripId}/chat?limit=50`, {
+        const res = await fetch(`/api/trips/${tripId}/chat?limit=50`, {
           credentials: 'include'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

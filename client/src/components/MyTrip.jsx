@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { ChevronRight, Search, MapPin } from "lucide-react"; 
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
-const baseURL = import.meta.env.VITE_API_URL;
+// const baseURL = import.meta.env.VITE_API_URL;
 
-export default function MyTrips({ onNavigate, user, updatedTrip }) {
+export default function MyTrips({ onNavigate, user }) {
   const [trips, setTrips] = useState([]);
   const [myTrips, setMyTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
 
   const handleDeleteTrip = async (tripId) => {
     try {
-      const res = await fetch(`${baseURL}/api/trips/${tripId}`, {
+      const res = await fetch(`/api/trips/${tripId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -34,8 +34,17 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
   }
 
   const handleNewStop = (tripId) => {
-    onNavigate(`${baseURL}/trips/${tripId}/new-stop`);
+    onNavigate(`/trips/${tripId}/new-stop`);
   };
+
+  
+  const handleViewItinerary = (tripId) => {
+    onNavigate(`/trips/${tripId}/itinerary`); 
+  };
+  
+  const handleTrackExpense = (tripId) => {
+    onNavigate(`/api/trips/${tripId}/expenses`);
+  }
 
   useEffect(() => {
     const fetchAllTrips = async () => {
@@ -43,14 +52,14 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
         setLoading(true);
 
         // Owned trips only
-        const ownedRes = await fetch(`${baseURL}/api/trips`, {
+        const ownedRes = await fetch('/api/trips', {
           credentials: 'include'
         });
         if(!ownedRes.ok) throw new Error('Failed to fetch owned trips');
         const ownedData = await ownedRes.json();
 
         // all trips (owned + joined) 
-        const allRes = await fetch(`${baseURL}/api/users/${user.user_id}/trips`, {
+        const allRes = await fetch(`/api/users/${user.user_id}/trips`, {
           credentials: 'include'
         });
         if(!allRes.ok) throw new Error('Failed to fetch all trips');  // 
@@ -142,6 +151,8 @@ export default function MyTrips({ onNavigate, user, updatedTrip }) {
                 onDelete={handleDeleteTrip}
                 onNewStop={handleNewStop}
                 onTripUpdate={handleTripUpdate}
+                onViewItinerary={handleViewItinerary}
+                onTrackExpense={handleTrackExpense}
               />
             ))}
           </div>

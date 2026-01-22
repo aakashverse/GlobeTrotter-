@@ -8,15 +8,16 @@ import {
   CheckCircle,
   Plus,
   Pencil,
-  Pin,
+  Clipboard,
+  BarChart,
   X,
   Sparkles
 } from "lucide-react";
-import StopDetails from "./StopsDetails";
-import EditTripModal from "./EditTrip";
-const baseURL = import.meta.env.VITE_API_URL;
 
-export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate }) {  
+import EditTripModal from "./EditTrip";
+// const baseURL = import.meta.env.VITE_API_URL;
+
+export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate, onViewItinerary, onTrackExpense }) {  
   const [stops, setStops] = useState([]);  
   const [showStopsModal, setShowStopsModal] = useState(false);  
   const [loadingStops, setLoadingStops] = useState(false);
@@ -58,7 +59,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
     if (!aiQuery.trim()) return;
     setLoadingAI(true);
     try {
-      const res = await fetch(`${baseURL}/api/trips/${trip.trip_id}/ai-assistant`, {
+      const res = await fetch(`/api/trips/${trip.trip_id}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -85,7 +86,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
   // fetch tripamtes
   const fetchTripMates = async () => {
   try {
-    const res = await fetch(`${baseURL}/api/trips/${trip.trip_id}/mates`, {
+    const res = await fetch(`/api/trips/${trip.trip_id}/mates`, {
       credentials: 'include'
     });
     if (res.ok) {
@@ -100,7 +101,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
   const fetchStops = async () => {
     setLoadingStops(true);
     try {
-      const res = await fetch(`${baseURL}/api/trips/${trip.trip_id}/stops`, {
+      const res = await fetch(`/api/trips/${trip.trip_id}/stops`, {
         credentials: 'include'
       });
       if (res.ok) {
@@ -129,6 +130,14 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
   const toggleStopsModal = () => {
     setShowStopsModal(!showStopsModal);
   };
+
+  const handleItinerary = (tripId) => {
+    onViewItinerary(tripId);
+  }
+
+  const handleExpense = (tripId) => {
+    onTrackExpense(tripId);
+  }
 
   return (
     <>
@@ -181,13 +190,10 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
 
           {/* Proper Modal Toggle */}
           <button
-            type="button"
-            onClick={toggleStopsModal}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-lg transition-all hover:shadow-sm disabled:opacity-50"
-            disabled={loadingStops}
+            onClick={() => handleExpense(trip.trip_id)}  // New prop
+            className="px-2 py-2 items-center text-sm font-bold rounded-sm bg-gray-500 hover:bg-gray-600 text-white shadow-md flex justify-center"
           >
-            <Pin size={14} />
-             Stops Details
+             ₹ Expenses
           </button>
         </div>
 
@@ -219,8 +225,8 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
           </button>
 
 
-          <button onClick={() => onNewStop(trip.trip_id)} className="flex items-center gap-1 px-3 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
-            <Plus size={14} /> Add Stop
+          <button onClick={() => handleItinerary(trip.trip_id)} className="flex items-center gap-1 px-3 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
+            <Plus size={14} /> Itinerary
           </button>
 
           <button onClick={handleDelete} className="flex items-center gap-1 px-3 py-2 text-xs bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all justify-center">
@@ -321,10 +327,6 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
               </button>
             </div>
             
-            {/* Modal Content */}
-            <div className="max-h-96 overflow-auto p-6">
-              <StopDetails stops={stops} tripId={trip.trip_id} />
-            </div>
           </div>
         </div>
       )}
