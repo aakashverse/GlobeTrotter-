@@ -172,8 +172,8 @@ const getStatusMeta = (status) => {
               <Globe className="w-9 h-9 text-blue-600" />
               <span>Top Destinations</span>
             </h3>
-            <button className="text-blue-600 font-semibold hover:underline flex items-center space-x-2">
-              View All <ArrowRight className="w-5 h-5" />
+            <button className="group text-blue-600 font-bold text-xl hover:text-blue-700 flex items-center space-x-2 transition-all">
+              View All <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition-transform" />
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -209,7 +209,7 @@ const getStatusMeta = (status) => {
       onClick={() => onNavigate('my-trips')} 
       className="group text-blue-600 font-bold text-xl hover:text-blue-700 flex items-center space-x-2 transition-all"
     >
-      <span>View All Trips</span>
+      <span>All Trips</span>
       <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition-transform" />
     </button>
   </div>

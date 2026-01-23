@@ -83,7 +83,7 @@ export default function CalendarScreen({ onBack }) {
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg">
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Calendar View</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Calendar</h1>
         </div>
       </header>
       <hr></hr>

@@ -821,23 +821,26 @@ app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
 // new itinerary
 app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
   const { stops } = req.body;
+  console.log("stop req body: ", stops);
   
   try {
     // Clear existing stops
-    await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [req.params.tripId]);
+    // await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [req.params.tripId]);
     
     // Insert new stops with activities as JSON
     for (let i = 0; i < stops.length; i++) {
       await pool.query(
-        'INSERT INTO trip_stops (trip_id, city, start_date, end_date, budget, stop_order, stop_activities) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [
-          req.params.tripId, 
+        'INSERT INTO trip_stops (trip_id, city, start_date, end_date, amount_spent, stop_order, paid_by, grand_total, stop_activities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [ 
+          stops[i].id,
           stops[i].city, 
           stops[i].startDate, 
           stops[i].endDate, 
-          stops[i].budget || 0, 
-          i,
-          JSON.stringify(stops[i].stop_activities || []) 
+          stops[i].amount || 0, 
+          stops[i]=i,
+          stops[i].paid_by,
+          stops[i].grand_total,
+          JSON.stringify(stops[i].activities || []) 
         ]
       );
     }

@@ -1,19 +1,26 @@
 import { useState, useEffect } from "react";
 import { 
   ChevronRight, Plus, MapPin, Trash2, GripVertical, Calendar, DollarSign,
-  Activity, Save, Clock 
+  Activity, Save, Clock, Clipboard, 
+  UserRound,
+  User
 } from "lucide-react";
 import useToast from "../hooks/useToast";
 
 export default function ItineraryBuilder({ tripId, onBack }) {
   const [stops, setStops] = useState([{
-    id: Date.now(),
+    id: tripId,
     city: "",
     startDate: "", 
     endDate: "",
-    budget: "",
-    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "sightseeing" }]
+    amount: "",
+    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "" }],
+    stop_order: "",
+    paid_by: "",
+    grand_total: ""
   }]);
+
+  console.log("Trip ID: ",tripId);
 
   // Load existing stops
   useEffect(() => {
@@ -25,16 +32,15 @@ export default function ItineraryBuilder({ tripId, onBack }) {
       .then(res => res.json())
       .then(data => {
         const formattedStops = (data.stops || []).map(stop => ({
-          id: stop.stop_id || Date.now(),
+          id: stop.id,
           city: stop.city || '',
           startDate: stop.start_date || '',
           endDate: stop.end_date || '',
-          budget: stop.budget || '',
-          activities: (stop.stop_activities || stop.activities || []).map(act => ({
-            ...act,
-            id: act.id || Date.now(),
-            category: act.category || 'sightseeing'
-          }))
+          amount: stop.amount || '',
+          activities: (stop.activities || []).map(act => ({
+            ...act
+          })),
+          grand_total: stop.amount + stop.grand_total
         }));
         setStops(formattedStops.length ? formattedStops : stops);
       })
@@ -49,8 +55,8 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   // Core functions (unchanged)
   const addStop = () => setStops([...stops, {
     id: Date.now() + 1,
-    city: "", startDate: "", endDate: "", budget: "",
-    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "sightseeing" }]
+    city: "", startDate: "", endDate: "", amount: "",
+    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "" }]
   }]);
 
   const removeStop = (stopId) => setStops(stops.filter(s => s.id !== stopId));
@@ -61,7 +67,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   const addActivity = (stopId) => {
     setStops(stops.map(stop => stop.id === stopId 
       ? { ...stop, activities: [...stop.activities, { 
-          id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "sightseeing" 
+          id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: ""
         }] } 
       : stop
     ));
@@ -107,6 +113,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stops })
       });
+
       if (!res.ok) throw new Error("Failed to save itinerary");
       showSuccess("Itinerary saved!");
       onBack();
@@ -117,7 +124,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
     }
   };
 
-  const totalBudget = stops.reduce((sum, stop) => sum + parseFloat(stop.budget || 0), 0);
+  const totalBudget = stops.reduce((sum, stop) => sum + parseFloat(stop.amount || 0), 0);
   const totalActivities = stops.reduce((sum, stop) => sum + stop.activities.length, 0);
 
   return (
@@ -193,14 +200,14 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                     
                     <div className="flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Calendar size={16} />
+                        {/* <Calendar size={16} /> */}
                         <input
                           type="date"
                           value={stop.startDate}
                           onChange={(e) => updateStop(stop.id, "startDate", e.target.value)}
                           className="bg-transparent border-none outline-none"
                         />
-                        <span>to</span>
+                        {/* <span>to</span> */}
                         <input
                           type="date"
                           value={stop.endDate}
@@ -213,12 +220,22 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                         <DollarSign size={16} />
                         <input
                           type="number"
-                          value={stop.budget}
-                          onChange={(e) => updateStop(stop.id, "budget", e.target.value)}
+                          value={stop.amount}
+                          onChange={(e) => updateStop(stop.id, "amount", e.target.value)}
                           placeholder="0"
                           className="w-24 text-right bg-transparent border-b border-gray-200 pb-1 outline-none"
                         />
                       </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                      <User size={16} className="text-blue-500 flex-shrink-0" />
+                      <input
+                        value={stop.paid_by}
+                        onChange={(e) => updateStop(stop.id, "paid_by", e.target.value)}
+                        placeholder="Paid by"
+                        className="w-full text-md font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
+                      />
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -279,8 +296,8 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                       
                       <input
                         type="number"
-                        value={activity.cost}
-                        onChange={(e) => updateActivity(stop.id, activity.id, "cost", e.target.value)}
+                        value={activity.grand_total}
+                        onChange={(e) => updateActivity(stop.id, activity.id, "grand_total", e.target.value)}
                         placeholder="0"
                         className="w-20 px-3 py-2 border rounded-md text-right"
                       />
