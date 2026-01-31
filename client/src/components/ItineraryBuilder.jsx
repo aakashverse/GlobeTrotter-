@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { 
-  ChevronRight, Plus, MapPin, Trash2, GripVertical, Calendar, DollarSign,
-  Activity, Save, Clock, Clipboard, 
-  UserRound,
-  User
+import {
+  ChevronRight, Plus, MapPin, Trash2, GripVertical, DollarSign,
+  Activity, Save, Clock, User
 } from "lucide-react";
 import useToast from "../hooks/useToast";
 
@@ -11,7 +9,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   const [stops, setStops] = useState([{
     id: tripId,
     city: "",
-    startDate: "", 
+    startDate: "",
     endDate: "",
     amount: "",
     activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "" }],
@@ -20,43 +18,55 @@ export default function ItineraryBuilder({ tripId, onBack }) {
     grand_total: ""
   }]);
 
-  console.log("Trip ID: ",tripId);
-
-  // Load existing stops
-  useEffect(() => {
-    if (tripId) {
-      fetch(`/api/trips/${tripId}/itinerary`, {
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      .then(res => res.json())
-      .then(data => {
-        const formattedStops = (data.stops || []).map(stop => ({
-          id: stop.id,
-          city: stop.city || '',
-          startDate: stop.start_date || '',
-          endDate: stop.end_date || '',
-          amount: stop.amount || '',
-          activities: (stop.activities || []).map(act => ({
-            ...act
-          })),
-          grand_total: stop.amount + stop.grand_total
-        }));
-        setStops(formattedStops.length ? formattedStops : stops);
-      })
-      .catch(() => setStops(stops));
-    }
-  }, [tripId]);
+  console.log("Trip ID: ", tripId);
 
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(null);
   const { showSuccess, showError } = useToast();
 
+  // Load existing stops
+  useEffect(() => {
+    if (!tripId) return; // ✅ prevents undefined API call
+
+    fetch(`/api/trips/${tripId}/itinerary`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    })
+      .then(res => res.json())
+      .then(data => {
+        const formattedStops = (data.stops || []).map(stop => ({
+          id: stop.id,
+          city: stop.city || "",
+          startDate: stop.start_date || "",
+          endDate: stop.end_date || "",
+          amount: stop.amount || "",
+          activities: (stop.activities || []).map(act => ({ ...act })),
+          // ✅ FIX: ensure numeric sum not string concat
+          grand_total: (Number(stop.amount || 0) + Number(stop.grand_total || 0))
+        }));
+
+        setStops(formattedStops.length ? formattedStops : [{
+          id: tripId,
+          city: "",
+          startDate: "",
+          endDate: "",
+          amount: "",
+          activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "" }],
+          paid_by: "",
+          grand_total: ""
+        }]);
+      })
+      .catch(() => {
+        // fallback
+      });
+  }, [tripId]);
+
   // Core functions (unchanged)
   const addStop = () => setStops([...stops, {
     id: Date.now() + 1,
     city: "", startDate: "", endDate: "", amount: "",
-    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "" }]
+    paid_by: "",
+    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "", category: "" }]
   }]);
 
   const removeStop = (stopId) => setStops(stops.filter(s => s.id !== stopId));
@@ -65,19 +75,30 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   };
 
   const addActivity = (stopId) => {
-    setStops(stops.map(stop => stop.id === stopId 
-      ? { ...stop, activities: [...stop.activities, { 
-          id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: ""
-        }] } 
+    setStops(stops.map(stop => stop.id === stopId
+      ? {
+        ...stop,
+        activities: [...stop.activities, {
+          id: Date.now(),
+          name: "",
+          timeStart: "",
+          timeEnd: "",
+          amount: "",
+          category: ""
+        }]
+      }
       : stop
     ));
   };
 
   const updateActivity = (stopId, activityId, field, value) => {
     setStops(stops.map(stop => stop.id === stopId
-      ? { ...stop, activities: stop.activities.map(act => 
+      ? {
+        ...stop,
+        activities: stop.activities.map(act =>
           act.id === activityId ? { ...act, [field]: value } : act
-        ) }
+        )
+      }
       : stop
     ));
   };
@@ -96,7 +117,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
     e.preventDefault();
     const dragIndex = dragging;
     if (dragIndex === null || dragIndex === dropIndex) return;
-    
+
     const newStops = [...stops];
     const [draggedStop] = newStops.splice(dragIndex, 1);
     newStops.splice(dropIndex, 0, draggedStop);
@@ -105,11 +126,17 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   };
 
   const handleSave = async () => {
+    // ✅ guard
+    if (!tripId) {
+      showError("Trip ID missing. Please open itinerary from a valid trip.");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/trips/${tripId}/itinerary`, {
         method: "POST",
-        credentials: 'include',
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stops })
       });
@@ -124,23 +151,30 @@ export default function ItineraryBuilder({ tripId, onBack }) {
     }
   };
 
-  const totalBudget = stops.reduce((sum, stop) => sum + parseFloat(stop.amount || 0), 0);
-  const totalActivities = stops.reduce((sum, stop) => sum + stop.activities.length, 0);
+  const totalBudget = stops.reduce((sum, stop) => sum + Number(stop.amount || 0), 0);
+  const totalActivities = stops.reduce((sum, stop) => sum + (stop.activities?.length || 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Simple Clean Header */}
+      {/* Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg">
-            <ChevronRight className="w-5 h-5 rotate-180" />
-          </button>
-          
-           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold text-gray-900">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
+            <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </button>
+
+            <h1 className="text-lg sm:hidden font-bold text-gray-900">
+              Itinerary
+            </h1>
+          </div>
+
+          <div className="text-center space-y-1">
+            <h1 className="hidden sm:block text-2xl font-bold text-gray-900">
               Itinerary View/Build
             </h1>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-600 font-medium">
+
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-gray-600 font-medium">
               <span className="flex items-center gap-1">
                 <MapPin size={16} className="text-indigo-500" />
                 {stops.length} stops
@@ -155,19 +189,18 @@ export default function ItineraryBuilder({ tripId, onBack }) {
               </span>
             </div>
           </div>
-          
+
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 flex items-center gap-2"
+            disabled={saving || !tripId}
+            className="w-full sm:w-auto px-6 py-2 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? "Saving..." : <> <Save size={16} /> Save </>}
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Stops List */}
+      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <div className="space-y-4">
           {stops.map((stop, index) => (
             <div
@@ -176,17 +209,16 @@ export default function ItineraryBuilder({ tripId, onBack }) {
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, index)}
-              className={`p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-all ${
-                dragging === index ? 'ring-2 ring-blue-200 shadow-md' : ''
-              }`}
+              className={`p-4 sm:p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-all ${dragging === index ? "ring-2 ring-blue-200 shadow-md" : ""
+                }`}
             >
               {/* Stop Header */}
-              <div className="flex items-start justify-between mb-6 pb-4 border-b">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold flex-shrink-0">
                     {index + 1}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-3">
                       <MapPin size={16} className="text-blue-500 flex-shrink-0" />
@@ -194,20 +226,18 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                         value={stop.city}
                         onChange={(e) => updateStop(stop.id, "city", e.target.value)}
                         placeholder="City name"
-                        className="w-full text-xl font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
+                        className="w-full text-lg sm:text-xl font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
                       />
                     </div>
-                    
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        {/* <Calendar size={16} /> */}
+
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
                         <input
                           type="date"
                           value={stop.startDate}
                           onChange={(e) => updateStop(stop.id, "startDate", e.target.value)}
                           className="bg-transparent border-none outline-none"
                         />
-                        {/* <span>to</span> */}
                         <input
                           type="date"
                           value={stop.endDate}
@@ -215,7 +245,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                           className="bg-transparent border-none outline-none"
                         />
                       </div>
-                      
+
                       <div className="flex items-center gap-1">
                         <DollarSign size={16} />
                         <input
@@ -223,27 +253,27 @@ export default function ItineraryBuilder({ tripId, onBack }) {
                           value={stop.amount}
                           onChange={(e) => updateStop(stop.id, "amount", e.target.value)}
                           placeholder="0"
-                          className="w-24 text-right bg-transparent border-b border-gray-200 pb-1 outline-none"
+                          className="w-28 sm:w-24 text-right bg-transparent border-b border-gray-200 pb-1 outline-none"
                         />
                       </div>
 
-                      <div className="flex items-center gap-2 mb-3">
-                      <User size={16} className="text-blue-500 flex-shrink-0" />
-                      <input
-                        value={stop.paid_by}
-                        onChange={(e) => updateStop(stop.id, "paid_by", e.target.value)}
-                        placeholder="Paid by"
-                        className="w-full text-md font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
-                      />
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <User size={16} className="text-blue-500 flex-shrink-0" />
+                        <input
+                          value={stop.paid_by || ""}
+                          onChange={(e) => updateStop(stop.id, "paid_by", e.target.value)}
+                          placeholder="Paid by"
+                          className="w-full sm:w-56 text-md font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-                
+
                 {stops.length > 1 && (
                   <button
                     onClick={() => removeStop(stop.id)}
-                    className="p-2 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-600 ml-4"
+                    className="self-end sm:self-auto p-2 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-600"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -253,65 +283,72 @@ export default function ItineraryBuilder({ tripId, onBack }) {
               {/* Activities */}
               <div className="space-y-3">
                 {stop.activities.map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg group hover:bg-gray-100">
-                    <GripVertical size={16} className="text-gray-400 cursor-move flex-shrink-0" />
-                    
-                    <select
-                      value={activity.category}
-                      onChange={(e) => updateActivity(stop.id, activity.id, "category", e.target.value)}
-                      className="px-3 py-2 border rounded-md text-sm bg-white"
-                    >
-                      <option value="sightseeing">🏛️ Sightseeing</option>
-                      <option value="food & Drinks">🍽️ Food & Drinks</option>
-                      <option value="stay">🏨 Stay</option>
-                      <option value="transport">🚕 Transport</option>
-                      <option value="shopping">🛍️ Shopping</option>
-                      <option value="others">Others</option>
-                    </select>
-                    
+                  <div
+                    key={activity.id}
+                    className="flex flex-col md:flex-row md:items-center gap-3 p-4 bg-gray-50 rounded-lg group hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <GripVertical size={16} className="text-gray-400 cursor-move flex-shrink-0" />
+
+                      <select
+                        value={activity.category || "sightseeing"}
+                        onChange={(e) => updateActivity(stop.id, activity.id, "category", e.target.value)}
+                        className="w-full md:w-auto px-3 py-2 border rounded-md text-sm bg-white"
+                      >
+                        <option value="sightseeing">🏛️ Sightseeing</option>
+                        <option value="food & Drinks">🍽️ Food & Drinks</option>
+                        <option value="stay">🏨 Stay</option>
+                        <option value="transport">🚕 Transport</option>
+                        <option value="shopping">🛍️ Shopping</option>
+                        <option value="others">Others</option>
+                      </select>
+                    </div>
+
                     <input
                       value={activity.name}
                       onChange={(e) => updateActivity(stop.id, activity.id, "name", e.target.value)}
                       placeholder="Activity name"
-                      className="flex-1 py-2 px-3 border rounded-md outline-none"
+                      className="w-full flex-1 py-2 px-3 border rounded-md outline-none"
                     />
-                    
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center gap-1 px-3 py-1 bg-white border rounded-md">
-                        <Clock size={14} />
-                        <input
-                          type="time"
-                          value={activity.timeStart}
-                          onChange={(e) => updateActivity(stop.id, activity.id, "timeStart", e.target.value)}
-                          className="w-16 bg-transparent border-none outline-none"
-                        />
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm w-full md:w-auto">
+                      <div className="flex items-center justify-between sm:justify-start gap-2 px-3 py-2 bg-white border rounded-md w-full sm:w-auto">
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} />
+                          <input
+                            type="time"
+                            value={activity.timeStart}
+                            onChange={(e) => updateActivity(stop.id, activity.id, "timeStart", e.target.value)}
+                            className="w-20 bg-transparent border-none outline-none"
+                          />
+                        </div>
                         <span>-</span>
                         <input
                           type="time"
                           value={activity.timeEnd}
                           onChange={(e) => updateActivity(stop.id, activity.id, "timeEnd", e.target.value)}
-                          className="w-16 bg-transparent border-none outline-none"
+                          className="w-20 bg-transparent border-none outline-none"
                         />
                       </div>
-                      
+
                       <input
                         type="number"
-                        value={activity.grand_total}
+                        value={activity.grand_total || ""}
                         onChange={(e) => updateActivity(stop.id, activity.id, "grand_total", e.target.value)}
                         placeholder="0"
-                        className="w-20 px-3 py-2 border rounded-md text-right"
+                        className="w-full sm:w-28 px-3 py-2 border rounded-md text-right"
                       />
                     </div>
-                    
+
                     <button
                       onClick={() => removeActivity(stop.id, activity.id)}
-                      className="p-2 hover:bg-red-100 rounded-lg text-red-500 opacity-0 group-hover:opacity-100"
+                      className="self-end md:self-auto p-2 hover:bg-red-100 rounded-lg text-red-500 md:opacity-0 md:group-hover:opacity-100"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 ))}
-                
+
                 <button
                   onClick={() => addActivity(stop.id)}
                   className="flex items-center gap-2 px-4 py-2 text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium"
@@ -327,10 +364,10 @@ export default function ItineraryBuilder({ tripId, onBack }) {
         {/* Add Stop Button */}
         <button
           onClick={addStop}
-          className="w-full p-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 group"
+          className="w-full mt-4 p-6 sm:p-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 group"
         >
           <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500" />
-          <span className="text-lg font-semibold text-gray-700 group-hover:text-blue-600">
+          <span className="text-base sm:text-lg font-semibold text-gray-700 group-hover:text-blue-600">
             Add Another Stop
           </span>
         </button>

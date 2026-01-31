@@ -255,7 +255,7 @@ export default function TripCard({ trip, onDelete, onNewStop, role, onTripUpdate
                 <div className="flex items-center gap-3">
                   <Sparkles className="w-8 h-8 animate-pulse" />
                   <div>
-                    <h2 className="text-xl font-bold">{trip.trip_name} AI</h2>
+                    <h2 className="text-xl font-bold">{trip.trip_name} trip AI</h2>
                     <p className="text-indigo-100 text-sm">Ask about weather, food, plans...</p>
                   </div>
                 </div>

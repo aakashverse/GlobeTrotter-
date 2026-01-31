@@ -802,53 +802,84 @@ app.get("/api/admin/analytics", authenticateToken, async (req, res) => {
 
 // get itinerary
 app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
-  const [stops] = await pool.query(`
-    SELECT * 
-    FROM trip_stops 
-    WHERE trip_id = ? 
-    ORDER BY stop_order
-  `, [req.params.id]);
+  try {
+    const [stops] = await pool.query(`
+      SELECT * 
+      FROM trip_stops 
+      WHERE trip_id = ? 
+      ORDER BY stop_order
+    `, [req.params.id]);
+    
   
-  // Parse JSON activities column
-  const stopsWithActivities = stops.map(stop => ({
-    ...stop,
-    stop_activities: JSON.parse(stop.stop_activities || '[]')  // ✅ Direct JSON parse
-  }));
-  
-  res.json({ stops: stopsWithActivities });
+    const stopsWithActivities = stops.map(stop => {
+      try {
+        
+        const activitiesJson = stop.stop_activities || '[]';
+        const parsedActivities = JSON.parse(activitiesJson);
+        
+        // Ensure it's an array
+        const safeActivities = Array.isArray(parsedActivities) 
+          ? parsedActivities 
+          : [];
+          
+        return {
+          ...stop,
+          stop_activities: safeActivities
+        };
+      } catch (parseError) {
+        console.warn(`Failed to parse activities for stop ${stop.id}:`, parseError.message);
+        return {
+          ...stop,
+          stop_activities: [] 
+        };
+      }
+    });
+    
+    res.json({ stops: stopsWithActivities });
+  } catch (error) {
+    console.error('Itinerary fetch error:', error);
+    res.status(500).json({ error: 'Failed to load itinerary' });
+  }
 });
+
 
 // new itinerary
 app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;  
   const { stops } = req.body;
-  console.log("stop req body: ", stops);
+  
+  console.log("Saving stops for trip", tripId, stops);
   
   try {
-    // Clear existing stops
-    // await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [req.params.tripId]);
     
-    // Insert new stops with activities as JSON
+    await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [tripId]);
+    
     for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+      
       await pool.query(
-        'INSERT INTO trip_stops (trip_id, city, start_date, end_date, amount_spent, stop_order, paid_by, grand_total, stop_activities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [ 
-          stops[i].id,
-          stops[i].city, 
-          stops[i].startDate, 
-          stops[i].endDate, 
-          stops[i].amount || 0, 
-          stops[i]=i,
-          stops[i].paid_by,
-          stops[i].grand_total,
-          JSON.stringify(stops[i].activities || []) 
+        `INSERT INTO trip_stops (
+          trip_id, city, start_date, end_date, amount_spent, 
+          stop_order, paid_by, grand_total, stop_activities
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          tripId,                           
+          stop.city || stop.name || '',      
+          stop.startDate || null,
+          stop.endDate || null,
+          parseFloat(stop.amount) || 0,
+          i,                                
+          stop.paid_by || 'You',
+          parseFloat(stop.grand_total) || 0,
+          JSON.stringify(stop.activities || [])  
         ]
       );
     }
     
-    res.json({ success: true });
+    res.json({ success: true, stopsSaved: stops.length });
   } catch (error) {
     console.error('Itinerary save error:', error);
-    res.status(500).json({ error: 'Failed to save itinerary' });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -886,40 +917,25 @@ app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
       [tripId]
     );
 
+    const analytics = {
+      totalSpent: parseFloat(summary.totalSpent) || 0,
+      byCategory,
+      byDate
+    };
+
     res.json({
       expenses,
-      analytics: {
-        totalSpent: summary.totalSpent || 0,
-        byCategory,
-        byDate
-      }
+      analytics
     });
 
+    console.log('Analytics :',analytics);
+
   } catch (err) {
+    console.error('Expenses error:', err);
     res.status(500).json({ error: 'Failed to load expenses' });
   }
 });
 
-
-
-// app.post('/api/trips/:tripId/budget', authenticateToken, async (req, res) => {
-//   try {
-//     if (!(await verifyTripOwner(req.params.tripId, req.user.user_id))) {
-//       return res.status(403).json({ error: 'Unauthorized' });
-//     }
-
-//     const { category, estimated_amount, actual_amount, work } = req.body;
-
-//     await pool.query(
-//       `INSERT INTO budget_breakdown (trip_id, category, estimated_amount, actual_amount, work)
-//        VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE estimated_amount=?, actual_amount=?, work=?`,
-//       [req.params.tripId, category, estimated_amount, actual_amount, work, estimated_amount, actual_amount, work]
-//     );
-//     res.json({ message: 'Budget updated' });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error' });
-//   }
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
