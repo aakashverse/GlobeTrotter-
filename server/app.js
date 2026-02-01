@@ -36,17 +36,32 @@ const pool = mysql.createPool({
 // });
 
 // DB test
-async function testDB() {
+async function waitForDB(retries = 10, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
     try {
       const conn = await pool.getConnection();
       console.log("MySQL connected");
       conn.release();
+      return;
     } catch (err) {
-      console.error("MySQL not ready yet");
+      console.log(`MySQL not ready (${i+1}/${retries}):`, err.message);
+      await new Promise(r => setTimeout(r, delay));
     }
+  }
+  console.error("MySQL connection failed!");
 }
-testDB();
 
+waitForDB();
+
+// test db connect
+app.get("/api/health/db", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS ok");
+    res.json({ ok: true, db: rows[0] });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // trip member?
 async function isTripMember(tripId, user) {
@@ -157,9 +172,8 @@ io.on("connection", (socket) => {
 
 // Middleware - PERFECT ORDER
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL, process.env.VITE_API_URL],
+  origin: ['https://globe-trotter-nine.vercel.app'],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
 app.use(express.json());
