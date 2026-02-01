@@ -2,11 +2,9 @@ const express = require('express');
 const jwt = require("jsonwebtoken");
 const cors = require('cors');
 const mysql = require('mysql2/promise');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
-const cookie = require("cookie");
 const http = require("http");
 const {Server} = require("socket.io");
 require('dotenv').config();
@@ -151,10 +149,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Create uploads dir
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads', { recursive: true });
-}
+
 
 // Middleware - PERFECT ORDER
 app.use(cors({
@@ -163,7 +158,8 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
+app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
@@ -173,19 +169,6 @@ const authRoutesFactory = require('./routes/auth.routes');
 const authRoutes = authRoutesFactory(pool);
 app.use('/api/auth', authRoutes);
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: 'uploads/',
-    filename: (_, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-  }),
-  fileFilter: (_, file, cb) => {
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.mimetype)) {
-      return cb(new Error('Only images'), false);
-    }
-    cb(null, true);
-  },
-  limits: { fileSize: 2 * 1024 * 1024 }
-});
 
 // verifyTripOwner
 async function verifyTripOwner(tripId, userId) {
@@ -974,7 +957,7 @@ app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
 });
 
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+const PORT = process.env.PORT;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
