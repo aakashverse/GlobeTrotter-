@@ -9,7 +9,6 @@ const http = require("http");
 const {Server} = require("socket.io");
 require('dotenv').config();
 const OpenAI = require("openai");
-const connectionString = process.env.DATABASE_URL;
 
 const authenticateToken = require('./Middlewares/auth');
 const app = express();
@@ -21,7 +20,12 @@ const openai = new OpenAI({
 });
 
 // db
-const pool = mysql.createPool(connectionString);
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  ssl: { rejectUnauthorized: false }
+});
 // const pool = mysql.createPool({
 //   host: process.env.DB_HOST,
 //   user: process.env.DB_USER,
@@ -62,7 +66,7 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000", process.env.CLIENT_URL ],
+    origin: ["http://localhost:5173", "http://localhost:3000", process.env.CLIENT_URL, process.env.VITE_API_URL ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   }
@@ -153,7 +157,7 @@ io.on("connection", (socket) => {
 
 // Middleware - PERFECT ORDER
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL],
+  origin: ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL, process.env.VITE_API_URL],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
 }));
@@ -187,7 +191,7 @@ async function verifyTripOwner(tripId, userId) {
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.query(
-      'SELECT user_id, first_name, last_name, email, phone_number, city, country, profile_photo, additional_info FROM users WHERE user_id = ?',
+      'SELECT user_id, first_name, last_name, email, phone_number, city, country, additional_info FROM users WHERE user_id = ?',
       [req.user.user_id]
     );
     if (!users.length) return res.status(404).json({ error: 'User not found' });
