@@ -15,7 +15,6 @@ export default function Register({ onBack }) {
     additional_info: ''
   });
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef(null);
   const { showSuccess, showError } = useToast(); 
 
   const handleSubmit = async (e) => {
@@ -46,15 +45,12 @@ export default function Register({ onBack }) {
       form.append('city', formData.city);
       form.append('country', formData.country);
       form.append('additional_info', formData.additional_info);
-      
-      if (fileInputRef.current?.files[0]) {
-        form.append('profile_photo', fileInputRef.current.files[0]);
-      }
 
       console.log('Sending...');
       
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
+        credentials: "include",
         body: form
       });
       
