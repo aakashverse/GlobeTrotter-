@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 module.exports = (pool) => {
 
   // register
-  router.post('/register', upload.single('profile_photo'), async (req, res, next) => {
+  router.post('/register', async (req, res, next) => {
     try {
       const {
         first_name,
@@ -45,7 +45,6 @@ module.exports = (pool) => {
       }
 
       const password_hash = await bcrypt.hash(password, 12);
-      const profile_photo = req.file ? `/uploads/${req.file.filename}` : null;
 
       const [result] = await pool.query(
         `INSERT INTO users

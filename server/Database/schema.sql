@@ -12,7 +12,6 @@ CREATE TABLE users (
     phone_number VARCHAR(20),
     city VARCHAR(100),
     country VARCHAR(100),
-    profile_photo VARCHAR(255),
     additional_info TEXT,
     is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

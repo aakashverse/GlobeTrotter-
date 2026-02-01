@@ -199,18 +199,12 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/users/profile', authenticateToken, upload.single('profile_photo'), async (req, res) => {
+app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const { first_name, last_name, phone_number, city, country, additional_info } = req.body;
-    const profile_photo = req.file ? `/uploads/${req.file.filename}` : null;
 
     let query = `UPDATE users SET first_name=?, last_name=?, phone_number=?, city=?, country=?, additional_info=?`;
     const params = [first_name, last_name, phone_number, city, country, additional_info];
-
-    if (profile_photo) {
-      query += ', profile_photo=?';
-      params.push(profile_photo);
-    }
 
     query += ' WHERE user_id=?';
     params.push(req.user.user_id);

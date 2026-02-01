@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Heart,
   Sparkles,
+  Bot,
   ArrowRight,
 } from 'lucide-react';
 
