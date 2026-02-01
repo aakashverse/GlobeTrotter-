@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const path = require('path');
-const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const http = require("http");
 const {Server} = require("socket.io");
@@ -32,16 +31,16 @@ const pool = mysql.createPool(connectionString);
 // });
 
 // DB test
-// async function testDB() {
-//     try {
-//       const conn = await pool.getConnection();
-//       console.log("MySQL connected");
-//       conn.release();
-//     } catch (err) {
-//       console.error("MySQL not ready yet");
-//     }
-// }
-// testDB();
+async function testDB() {
+    try {
+      const conn = await pool.getConnection();
+      console.log("MySQL connected");
+      conn.release();
+    } catch (err) {
+      console.error("MySQL not ready yet");
+    }
+}
+testDB();
 
 
 // trip member?
@@ -62,7 +61,7 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000" ],
+    origin: ["http://localhost:5173", "http://localhost:3000", process.env.CLIENT_URL ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   }
@@ -162,7 +161,7 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use('/uploads', express.static('uploads'));
+app.use(cors());
 
 // Auth routes
 const authRoutesFactory = require('./routes/auth.routes');
