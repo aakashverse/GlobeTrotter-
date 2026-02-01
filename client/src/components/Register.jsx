@@ -51,7 +51,8 @@ export default function Register({ onBack }) {
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
         credentials: "include",
-        body: form
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
       
       console.log('Status:', res.status);
