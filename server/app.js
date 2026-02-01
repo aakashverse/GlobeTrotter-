@@ -11,6 +11,7 @@ const http = require("http");
 const {Server} = require("socket.io");
 require('dotenv').config();
 const OpenAI = require("openai");
+const connectionString = process.env.DATABASE_URL;
 
 const authenticateToken = require('./Middlewares/auth');
 const app = express();
@@ -21,32 +22,29 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// const dbUrl = process.env.DATABASE_URL;
-// if (!dbUrl) {
-//   throw new Error("DATABASE_URL not set");
-// }
-
 // db
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const pool = mysql.createPool(connectionString);
+// const pool = mysql.createPool({
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME,
+//   waitForConnections: true,
+//   connectionLimit: 10,
+// });
 
 // DB test
-async function testDB() {
-    try {
-      const conn = await pool.getConnection();
-      console.log("MySQL connected");
-      conn.release();
-    } catch (err) {
-      console.error("MySQL not ready yet");
-    }
-}
-testDB();
+// async function testDB() {
+//     try {
+//       const conn = await pool.getConnection();
+//       console.log("MySQL connected");
+//       conn.release();
+//     } catch (err) {
+//       console.error("MySQL not ready yet");
+//     }
+// }
+// testDB();
+
 
 // trip member?
 async function isTripMember(tripId, user) {
@@ -66,7 +64,7 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000",  process.env.CLIENT_URL ],
+    origin: ["http://localhost:5173", "http://localhost:3000" ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   }
@@ -803,87 +801,126 @@ app.get("/api/admin/analytics", authenticateToken, async (req, res) => {
 // get itinerary
 app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
   try {
-    const [stops] = await pool.query(`
-      SELECT * 
-      FROM trip_stops 
-      WHERE trip_id = ? 
-      ORDER BY stop_order
-    `, [req.params.id]);
+    console.log('GET itinerary for trip:', req.params.id);
+    const [stops] = await pool.query(
+      `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order`,
+      [req.params.id]
+    );
     
-  
     const stopsWithActivities = stops.map(stop => {
       try {
-        
-        const activitiesJson = stop.stop_activities || '[]';
-        const parsedActivities = JSON.parse(activitiesJson);
-        
-        // Ensure it's an array
-        const safeActivities = Array.isArray(parsedActivities) 
-          ? parsedActivities 
-          : [];
-          
         return {
           ...stop,
-          stop_activities: safeActivities
+          activities: JSON.parse(stop.stop_activities || '[]')
         };
-      } catch (parseError) {
-        console.warn(`Failed to parse activities for stop ${stop.id}:`, parseError.message);
-        return {
-          ...stop,
-          stop_activities: [] 
-        };
+      } catch (e) {
+        console.warn('JSON parse failed for stop', stop.id);
+        return { ...stop, activities: [] };
       }
     });
     
     res.json({ stops: stopsWithActivities });
   } catch (error) {
-    console.error('Itinerary fetch error:', error);
-    res.status(500).json({ error: 'Failed to load itinerary' });
+    // console.error('get /itinerary ERROR:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
 // new itinerary
-app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
-  const { tripId } = req.params;  
-  const { stops } = req.body;
-  
-  console.log("Saving stops for trip", tripId, stops);
-  
+app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
   try {
+    // console.log(' GET itinerary for trip:', req.params.id);
+    const [stops] = await pool.query(
+      `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order`,
+      [req.params.id]
+    );
     
-    await pool.query('DELETE FROM trip_stops WHERE trip_id = ?', [tripId]);
+    const stopsWithActivities = stops.map(stop => {
+      try {
+        return {
+          ...stop,
+          activities: JSON.parse(stop.stop_activities || '[]')
+        };
+      } catch (e) {
+        console.warn('JSON parse failed for stop', stop.stop_id); 
+        return { ...stop, activities: [] };
+      }
+    });
+    
+    // console.log('sending', stopsWithActivities.length, 'stops');
+    res.json({ stops: stopsWithActivities });
+  } catch (error) {
+    // console.error('gET /itinerary ERROR:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 
+app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const { stops } = req.body;
+
+  console.log('Saving', stops?.length || 0, 'stops for trip', tripId);
+  
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();  
+    await connection.query('DELETE FROM trip_stops WHERE trip_id = ?', [tripId]);
     
     for (let i = 0; i < stops.length; i++) {
       const stop = stops[i];
-      
-      await pool.query(
+      await connection.query(
         `INSERT INTO trip_stops (
           trip_id, city, start_date, end_date, amount_spent, 
           stop_order, paid_by, grand_total, stop_activities
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          tripId,                           
-          stop.city || stop.name || '',      
-          stop.startDate || null,
-          stop.endDate || null,
-          parseFloat(stop.amount) || 0,
-          i,                                
+          tripId,
+          stop.city || '',
+          stop.startDate || null,        
+          stop.endDate || null,          
+          parseFloat(stop.amount) || 0,  
+          i + 1,  
           stop.paid_by || 'You',
-          parseFloat(stop.grand_total) || 0,
-          JSON.stringify(stop.activities || [])  
+          parseFloat(stop.grand_total) || parseFloat(stop.amount) || 0,
+          JSON.stringify(stop.activities || [])
         ]
       );
     }
     
+    await connection.commit();  
+    // console.log('SAVED', stops.length, 'stops');
     res.json({ success: true, stopsSaved: stops.length });
   } catch (error) {
-    console.error('Itinerary save error:', error);
+    await connection.rollback();
+    // console.error(' POST ERROR:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+
+// create expense
+app.post('/api/trips/:tripId/expenses', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const { title, amount, category, paid_by, expense_date, notes } = req.body;
+  
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO expenses (trip_id, title, amount, category, paid_by, expense_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [tripId, title, parseFloat(amount), category, paid_by, expense_date, notes]
+    );
+    res.json({ success: true, expenseId: result.insertId });
+  } catch (error) {
+    console.error('Expense save error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// expense and budget
+
+// get expense 
 app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
   const { tripId } = req.params;
 

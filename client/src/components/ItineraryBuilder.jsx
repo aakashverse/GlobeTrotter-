@@ -1,137 +1,90 @@
 import { useState, useEffect } from "react";
-import {
-  ChevronRight, Plus, MapPin, Trash2, GripVertical, DollarSign,
-  Activity, Save, Clock, User
-} from "lucide-react";
+import { ChevronRight, Plus, MapPin, Trash2, DollarSign, Activity, Save, Clock, User } from "lucide-react";
 import useToast from "../hooks/useToast";
 
 export default function ItineraryBuilder({ tripId, onBack }) {
-  const [stops, setStops] = useState([{
-    id: tripId,
-    city: "",
-    startDate: "",
-    endDate: "",
-    amount: "",
-    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", cost: "", category: "" }],
-    stop_order: "",
-    paid_by: "",
-    grand_total: ""
-  }]);
-
-  console.log("Trip ID: ", tripId);
-
+  const [stops, setStops] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [dragging, setDragging] = useState(null);
   const { showSuccess, showError } = useToast();
 
-  // Load existing stops
-  useEffect(() => {
-    if (!tripId) return; // ✅ prevents undefined API call
+  // load
+   useEffect(() => {
+  if (!tripId) return;
 
-    fetch(`/api/trips/${tripId}/itinerary`, {
-      credentials: "include",
-      headers: { "Content-Type": "application/json" }
+  const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];  
+  };
+  
+  fetch(`/api/trips/${tripId}/itinerary`, { credentials: "include" })
+    .then(res => {
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
     })
-      .then(res => res.json())
-      .then(data => {
-        const formattedStops = (data.stops || []).map(stop => ({
-          id: stop.id,
-          city: stop.city || "",
-          startDate: stop.start_date || "",
-          endDate: stop.end_date || "",
-          amount: stop.amount || "",
-          activities: (stop.activities || []).map(act => ({ ...act })),
-          // ✅ FIX: ensure numeric sum not string concat
-          grand_total: (Number(stop.amount || 0) + Number(stop.grand_total || 0))
-        }));
+    .then(data => {
+      console.log('Backend data:', data.stops[0]);
+      
+      const loadedStops = (data.stops || []).map(stop => ({
+        id: stop.id,
+        city: stop.city || "",
+        startDate: formatDate(stop.start_date) || "",
+        endDate: formatDate(stop.end_date) || "",
+        amount: stop.amount_spent || "",
+        paid_by: stop.paid_by || "",
+        activities: stop.activities || []  
+      }));
+      
+      console.log('Loaded stops:', loadedStops[0]);
+      setStops(loadedStops.length ? loadedStops : [createEmptyStop()]);
+    })
+    .catch(err => {
+      console.error('Load failed:', err);
+      setStops([createEmptyStop()]);
+    });
+}, [tripId]);
 
-        setStops(formattedStops.length ? formattedStops : [{
-          id: tripId,
-          city: "",
-          startDate: "",
-          endDate: "",
-          amount: "",
-          activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "" }],
-          paid_by: "",
-          grand_total: ""
-        }]);
-      })
-      .catch(() => {
-        // fallback
-      });
-  }, [tripId]);
 
-  // Core functions (unchanged)
-  const addStop = () => setStops([...stops, {
-    id: Date.now() + 1,
+  const createEmptyStop = () => ({
+    id: Date.now(),
     city: "", startDate: "", endDate: "", amount: "",
-    paid_by: "",
-    activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", amount: "", category: "" }]
-  }]);
+    paid_by: "", activities: [{ id: Date.now(), name: "", timeStart: "", timeEnd: "", grand_total: "", category: "sightseeing" }]
+  });
 
-  const removeStop = (stopId) => setStops(stops.filter(s => s.id !== stopId));
-  const updateStop = (stopId, field, value) => {
-    setStops(stops.map(stop => stop.id === stopId ? { ...stop, [field]: value } : stop));
+  const addStop = () => setStops([...stops, createEmptyStop()]);
+  const removeStop = (id) => setStops(stops.filter(s => s.id !== id));
+  
+  const updateStop = (id, field, value) => {
+    setStops(stops.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
   const addActivity = (stopId) => {
     setStops(stops.map(stop => stop.id === stopId
-      ? {
-        ...stop,
-        activities: [...stop.activities, {
-          id: Date.now(),
-          name: "",
-          timeStart: "",
-          timeEnd: "",
-          amount: "",
-          category: ""
-        }]
-      }
+      ? { ...stop, activities: [...stop.activities, { 
+          id: Date.now(), name: "", timeStart: "", timeEnd: "", grand_total: "", category: "sightseeing" 
+        }] }
       : stop
     ));
   };
 
-  const updateActivity = (stopId, activityId, field, value) => {
+  const updateActivity = (stopId, actId, field, value) => {
     setStops(stops.map(stop => stop.id === stopId
-      ? {
-        ...stop,
-        activities: stop.activities.map(act =>
-          act.id === activityId ? { ...act, [field]: value } : act
-        )
-      }
+      ? { ...stop, activities: stop.activities.map(act => 
+          act.id === actId ? { ...act, [field]: value } : act 
+        ) }
       : stop
     ));
   };
 
-  const removeActivity = (stopId, activityId) => {
+  const removeActivity = (stopId, actId) => {
     setStops(stops.map(stop => stop.id === stopId
-      ? { ...stop, activities: stop.activities.filter(a => a.id !== activityId) }
+      ? { ...stop, activities: stop.activities.filter(a => a.id !== actId) }
       : stop
     ));
   };
 
-  // Drag & Drop
-  const handleDragStart = (e, index) => setDragging(index);
-  const handleDragOver = (e) => e.preventDefault();
-  const handleDrop = (e, dropIndex) => {
-    e.preventDefault();
-    const dragIndex = dragging;
-    if (dragIndex === null || dragIndex === dropIndex) return;
-
-    const newStops = [...stops];
-    const [draggedStop] = newStops.splice(dragIndex, 1);
-    newStops.splice(dropIndex, 0, draggedStop);
-    setStops(newStops);
-    setDragging(null);
-  };
-
+  
   const handleSave = async () => {
-    // ✅ guard
-    if (!tripId) {
-      showError("Trip ID missing. Please open itinerary from a valid trip.");
-      return;
-    }
-
     setSaving(true);
     try {
       const res = await fetch(`/api/trips/${tripId}/itinerary`, {
@@ -140,238 +93,173 @@ export default function ItineraryBuilder({ tripId, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stops })
       });
-
-      if (!res.ok) throw new Error("Failed to save itinerary");
-      showSuccess("Itinerary saved!");
-      onBack();
+      
+      if (res.ok) {
+        showSuccess("Saved!");
+        onBack();
+      } else {
+        showError("Save failed");
+      }
     } catch (err) {
-      showError("Save failed: " + err.message);
+      showError("Save failed");
     } finally {
       setSaving(false);
     }
   };
 
-  const totalBudget = stops.reduce((sum, stop) => sum + Number(stop.amount || 0), 0);
-  const totalActivities = stops.reduce((sum, stop) => sum + (stop.activities?.length || 0), 0);
+  const totalBudget = stops.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+  const totalActivities = stops.reduce((sum, s) => sum + s.activities.length, 0);
+
+  if (!stops.length) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center justify-between sm:justify-start gap-3">
-            <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg">
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </button>
-
-            <h1 className="text-lg sm:hidden font-bold text-gray-900">
-              Itinerary
-            </h1>
-          </div>
-
-          <div className="text-center space-y-1">
-            <h1 className="hidden sm:block text-2xl font-bold text-gray-900">
-              Itinerary View/Build
-            </h1>
-
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-gray-600 font-medium">
-              <span className="flex items-center gap-1">
-                <MapPin size={16} className="text-indigo-500" />
-                {stops.length} stops
-              </span>
-              <span className="flex items-center gap-1">
-                <Activity size={16} className="text-emerald-500" />
-                {totalActivities} activities
-              </span>
-              <span className="flex items-center gap-1">
-                <DollarSign size={16} className="text-amber-500" />
-                ₹{totalBudget.toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={saving || !tripId}
-            className="w-full sm:w-auto px-6 py-2 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? "Saving..." : <> <Save size={16} /> Save </>}
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="space-y-4">
-          {stops.map((stop, index) => (
-            <div
-              key={stop.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, index)}
-              className={`p-4 sm:p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-all ${dragging === index ? "ring-2 ring-blue-200 shadow-md" : ""
-                }`}
-            >
-              {/* Stop Header */}
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b">
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold flex-shrink-0">
-                    {index + 1}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-3">
-                      <MapPin size={16} className="text-blue-500 flex-shrink-0" />
-                      <input
-                        value={stop.city}
-                        onChange={(e) => updateStop(stop.id, "city", e.target.value)}
-                        placeholder="City name"
-                        className="w-full text-lg sm:text-xl font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
-                      />
-                    </div>
-
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 text-sm">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <input
-                          type="date"
-                          value={stop.startDate}
-                          onChange={(e) => updateStop(stop.id, "startDate", e.target.value)}
-                          className="bg-transparent border-none outline-none"
-                        />
-                        <input
-                          type="date"
-                          value={stop.endDate}
-                          onChange={(e) => updateStop(stop.id, "endDate", e.target.value)}
-                          className="bg-transparent border-none outline-none"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <DollarSign size={16} />
-                        <input
-                          type="number"
-                          value={stop.amount}
-                          onChange={(e) => updateStop(stop.id, "amount", e.target.value)}
-                          placeholder="0"
-                          className="w-28 sm:w-24 text-right bg-transparent border-b border-gray-200 pb-1 outline-none"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <User size={16} className="text-blue-500 flex-shrink-0" />
-                        <input
-                          value={stop.paid_by || ""}
-                          onChange={(e) => updateStop(stop.id, "paid_by", e.target.value)}
-                          placeholder="Paid by"
-                          className="w-full sm:w-56 text-md font-semibold bg-transparent outline-none border-b border-gray-200 pb-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {stops.length > 1 && (
-                  <button
-                    onClick={() => removeStop(stop.id)}
-                    className="self-end sm:self-auto p-2 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-
-              {/* Activities */}
-              <div className="space-y-3">
-                {stop.activities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex flex-col md:flex-row md:items-center gap-3 p-4 bg-gray-50 rounded-lg group hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-3">
-                      <GripVertical size={16} className="text-gray-400 cursor-move flex-shrink-0" />
-
-                      <select
-                        value={activity.category || "sightseeing"}
-                        onChange={(e) => updateActivity(stop.id, activity.id, "category", e.target.value)}
-                        className="w-full md:w-auto px-3 py-2 border rounded-md text-sm bg-white"
-                      >
-                        <option value="sightseeing">🏛️ Sightseeing</option>
-                        <option value="food & Drinks">🍽️ Food & Drinks</option>
-                        <option value="stay">🏨 Stay</option>
-                        <option value="transport">🚕 Transport</option>
-                        <option value="shopping">🛍️ Shopping</option>
-                        <option value="others">Others</option>
-                      </select>
-                    </div>
-
-                    <input
-                      value={activity.name}
-                      onChange={(e) => updateActivity(stop.id, activity.id, "name", e.target.value)}
-                      placeholder="Activity name"
-                      className="w-full flex-1 py-2 px-3 border rounded-md outline-none"
-                    />
-
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm w-full md:w-auto">
-                      <div className="flex items-center justify-between sm:justify-start gap-2 px-3 py-2 bg-white border rounded-md w-full sm:w-auto">
-                        <div className="flex items-center gap-1">
-                          <Clock size={14} />
-                          <input
-                            type="time"
-                            value={activity.timeStart}
-                            onChange={(e) => updateActivity(stop.id, activity.id, "timeStart", e.target.value)}
-                            className="w-20 bg-transparent border-none outline-none"
-                          />
-                        </div>
-                        <span>-</span>
-                        <input
-                          type="time"
-                          value={activity.timeEnd}
-                          onChange={(e) => updateActivity(stop.id, activity.id, "timeEnd", e.target.value)}
-                          className="w-20 bg-transparent border-none outline-none"
-                        />
-                      </div>
-
-                      <input
-                        type="number"
-                        value={activity.grand_total || ""}
-                        onChange={(e) => updateActivity(stop.id, activity.id, "grand_total", e.target.value)}
-                        placeholder="0"
-                        className="w-full sm:w-28 px-3 py-2 border rounded-md text-right"
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => removeActivity(stop.id, activity.id)}
-                      className="self-end md:self-auto p-2 hover:bg-red-100 rounded-lg text-red-500 md:opacity-0 md:group-hover:opacity-100"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={() => addActivity(stop.id)}
-                  className="flex items-center gap-2 px-4 py-2 text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium"
-                >
-                  <Plus size={16} />
-                  Add Activity
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Add Stop Button */}
-        <button
-          onClick={addStop}
-          className="w-full mt-4 p-6 sm:p-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 group"
-        >
-          <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500" />
-          <span className="text-base sm:text-lg font-semibold text-gray-700 group-hover:text-blue-600">
-            Add Another Stop
-          </span>
+    <div className="min-h-screen bg-gray-50 p-4">
+      {/* SIMPLE HEADER */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6 flex flex-col sm:flex-row gap-4 items-center sm:justify-between">
+        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded">
+          <ChevronRight className="w-5 h-5 rotate-180" />
         </button>
-      </main>
+        
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Itinerary</h1>
+          <div className="flex gap-4 text-sm mt-2">
+            <span>{stops.length} stops</span>
+            <span>{totalActivities} activities</span>
+            <span>₹{totalBudget}</span>
+          </div>
+        </div>
+        
+        <button 
+          onClick={handleSave} 
+          disabled={saving}
+          className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
+        >
+          {saving ? "Saving..." : <> <Save size={16} /> Save </>}
+        </button>
+      </div>
+
+      {/* SIMPLE STOPS */}
+      <div className="space-y-4">
+        {stops.map((stop, index) => (
+          <div key={stop.id} className="bg-white p-6 rounded-lg shadow">
+            {/* Stop Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 border rounded">
+              <div>
+                <label>City</label>
+                <input 
+                  value={stop.city} 
+                  onChange={e => updateStop(stop.id, "city", e.target.value)}
+                  className="w-full p-2 border rounded mt-1"
+                />
+              </div>
+              <div>
+                <label>Start</label>
+                <input 
+                  type="date" 
+                  value={stop.startDate} 
+                  onChange={e => updateStop(stop.id, "startDate", e.target.value)}
+                  className="w-full p-2 border rounded mt-1"
+                />
+              </div>
+              <div>
+                <label>End</label>
+                <input 
+                  type="date" 
+                  value={stop.endDate} 
+                  onChange={e => updateStop(stop.id, "endDate", e.target.value)}
+                  className="w-full p-2 border rounded mt-1"
+                />
+              </div>
+              <div>
+                <label>Amount</label>
+                <input 
+                  type="number" 
+                  value={stop.amount} 
+                  onChange={e => updateStop(stop.id, "amount", e.target.value)}
+                  className="w-full p-2 border rounded mt-1"
+                />
+              </div>
+            </div>
+
+            {/* SIMPLE ACTIVITIES */}
+            <div>
+              {stop.activities.map(activity => (
+                <div key={activity.id} className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded mb-2 items-center">
+                  <select 
+                    value={activity.category} 
+                    onChange={e => updateActivity(stop.id, activity.id, "category", e.target.value)}
+                    className="p-2 border rounded"
+                  >
+                    <option value="sightseeing">🏛️ Sightseeing</option>
+                    <option value="food">🍽️ Food</option>
+                    <option value="stay">🏨 Stay</option>
+                    <option value="transport">🚕 Transport</option>
+                  </select>
+                  
+                  <input 
+                    value={activity.name} 
+                    placeholder="Activity" 
+                    onChange={e => updateActivity(stop.id, activity.id, "name", e.target.value)}
+                    className="flex-1 p-2 border rounded"
+                  />
+                  
+                  <input 
+                    type="time" 
+                    value={activity.timeStart} 
+                    onChange={e => updateActivity(stop.id, activity.id, "timeStart", e.target.value)}
+                    className="w-20 p-2 border rounded"
+                  />
+                  
+                  <input 
+                    type="time" 
+                    value={activity.timeEnd} 
+                    onChange={e => updateActivity(stop.id, activity.id, "timeEnd", e.target.value)}
+                    className="w-20 p-2 border rounded"
+                  />
+                  
+                  <input 
+                    type="number" 
+                    value={activity.grand_total} 
+                    placeholder="0" 
+                    onChange={e => updateActivity(stop.id, activity.id, "grand_total", e.target.value)}
+                    className="w-20 p-2 border rounded"
+                  />
+                  
+                  <button 
+                    onClick={() => removeActivity(stop.id, activity.id)}
+                    className="p-2 text-red-500 hover:bg-red-100 rounded"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              
+              <button 
+                onClick={() => addActivity(stop.id)}
+                className="w-full p-2 text-green-600 hover:bg-green-50 rounded flex items-center gap-2"
+              >
+                <Plus size={16} /> Add Activity
+              </button>
+            </div>
+
+            {stops.length > 1 && (
+              <button 
+                onClick={() => removeStop(stop.id)}
+                className="mt-4 p-2 text-red-500 hover:bg-red-50 rounded w-full"
+              >
+                Remove Stop
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button 
+        onClick={addStop}
+        className="w-full mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 flex items-center justify-center gap-2"
+      >
+        <Plus size={20} /> Add Stop
+      </button>
     </div>
   );
 }

@@ -133,15 +133,6 @@ export default function Register({ onBack }) {
             />
           </div>
 
-          <div>
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              className="w-full"
-            />
-          </div>
-
           <button
             type="submit"
             disabled={loading}

@@ -117,17 +117,15 @@ CREATE TABLE itinerary_items (
 
 -- budget table
 CREATE TABLE expenses (
-    expense_id INT PRIMARY KEY AUTO_INCREMENT,
-    trip_id INT NOT NULL,
-    title VARCHAR(100) NOT NULL,          
-    category VARCHAR(50) NOT NULL,        
-    amount DECIMAL(10,2) NOT NULL,
-    paid_by VARCHAR(50),                 
-    payment_mode VARCHAR(30),           
-    expense_date DATE NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (trip_id) REFERENCES trips(trip_id) ON DELETE CASCADE
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  trip_id INT NOT NULL,
+  title VARCHAR(255),
+  amount DECIMAL(10,2),
+  category VARCHAR(100),
+  paid_by VARCHAR(100),
+  expense_date DATE,
+  notes TEXT,
+  FOREIGN KEY (trip_id) REFERENCES trips(trip_id) ON DELETE CASCADE
 );
 
 
