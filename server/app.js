@@ -20,12 +20,8 @@ const openai = new OpenAI({
 });
 
 // db
-const pool = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-  waitForConnections: true,
-  connectionLimit: 10,
-  ssl: { rejectUnauthorized: false }
-});
+const pool = mysql.createPool(process.env.DATABASE_URL);
+
 // const pool = mysql.createPool({
 //   host: process.env.DB_HOST,
 //   user: process.env.DB_USER,
