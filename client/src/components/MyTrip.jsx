@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronRight, Search, MapPin } from "lucide-react"; 
 import TripCard from "./TripCard";
 import useToast from "../hooks/useToast";
-// const baseURL = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL;
 
 export default function MyTrips({ onNavigate, user }) {
   const [trips, setTrips] = useState([]);
@@ -13,7 +13,7 @@ export default function MyTrips({ onNavigate, user }) {
 
   const handleDeleteTrip = async (tripId) => {
     try {
-      const res = await fetch(`/api/trips/${tripId}`, {
+      const res = await fetch(`${API}/api/trips/${tripId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -34,16 +34,16 @@ export default function MyTrips({ onNavigate, user }) {
   }
 
   const handleNewStop = (tripId) => {
-    onNavigate(`/trips/${tripId}/new-stop`);
+    onNavigate(`${API}/trips/${tripId}/new-stop`);
   };
 
   
   const handleViewItinerary = (tripId) => {
-    onNavigate(`/trips/${tripId}/itinerary`); 
+    onNavigate(`${API}/trips/${tripId}/itinerary`); 
   };
   
   const handleTrackExpense = (tripId) => {
-    onNavigate(`/api/trips/${tripId}/expenses`);
+    onNavigate(`${API}/api/trips/${tripId}/expenses`);
   }
 
   useEffect(() => {
@@ -52,14 +52,14 @@ export default function MyTrips({ onNavigate, user }) {
         setLoading(true);
 
         // Owned trips only
-        const ownedRes = await fetch('/api/trips', {
+        const ownedRes = await fetch(`${API}/api/trips`, {
           credentials: 'include'
         });
         if(!ownedRes.ok) throw new Error('Failed to fetch owned trips');
         const ownedData = await ownedRes.json();
 
         // all trips (owned + joined) 
-        const allRes = await fetch(`/api/users/${user.user_id}/trips`, {
+        const allRes = await fetch(`${API}/api/users/${user.user_id}/trips`, {
           credentials: 'include'
         });
         if(!allRes.ok) throw new Error('Failed to fetch all trips');  // 

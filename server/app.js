@@ -4,6 +4,7 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const cookie = require("cookie");
 const http = require("http");
 const {Server} = require("socket.io");
 require('dotenv').config();
@@ -161,7 +162,6 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors());
 
 // Auth routes
 const authRoutesFactory = require('./routes/auth.routes');
@@ -777,34 +777,6 @@ app.get("/api/admin/analytics", authenticateToken, async (req, res) => {
 // get itinerary
 app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
   try {
-    console.log('GET itinerary for trip:', req.params.id);
-    const [stops] = await pool.query(
-      `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order`,
-      [req.params.id]
-    );
-    
-    const stopsWithActivities = stops.map(stop => {
-      try {
-        return {
-          ...stop,
-          activities: JSON.parse(stop.stop_activities || '[]')
-        };
-      } catch (e) {
-        console.warn('JSON parse failed for stop', stop.id);
-        return { ...stop, activities: [] };
-      }
-    });
-    
-    res.json({ stops: stopsWithActivities });
-  } catch (error) {
-    // console.error('get /itinerary ERROR:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// new itinerary
-app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
-  try {
     // console.log(' GET itinerary for trip:', req.params.id);
     const [stops] = await pool.query(
       `SELECT * FROM trip_stops WHERE trip_id = ? ORDER BY stop_order`,
@@ -831,7 +803,7 @@ app.get('/api/trips/:id/itinerary', authenticateToken, async (req, res) => {
   }
 });
 
-// 
+// new itinerary
 app.post('/api/trips/:tripId/itinerary', authenticateToken, async (req, res) => {
   const { tripId } = req.params;
   const { stops } = req.body;
@@ -951,6 +923,6 @@ app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
 
 
 const PORT = process.env.PORT;
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

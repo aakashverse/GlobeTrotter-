@@ -3,7 +3,8 @@ import { Send, ScrollText, ChevronLeft, Bot } from "lucide-react";
 import { io } from "socket.io-client";
 import useToast from "../hooks/useToast";
 import TripAI from "./TripAI";
-// const baseURL = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL;
+const CLIENT = import.meta.env.CLIENT_URL;
 
 export default function TripChat({ tripId, userId, firstName, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -27,7 +28,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
     setAiResponse(''); // Clear previous response
     
     try {
-      const res = await fetch(`/api/trips/${tripId}/ai-assistant`, {
+      const res = await fetch(`${API}/api/trips/${tripId}/ai-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -57,12 +58,12 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`/api/trips/${tripId}/chat?limit=50`, {
+        const res = await fetch(`${API}/api/trips/${tripId}/chat?limit=50`, {
           credentials: 'include'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        // console.log('📥 Loaded history:', data.length, 'messages');
+        // console.log('Loaded history:', data.length, 'messages');
         
         const fixedMessages = Array.isArray(data) ? data.map(msg => ({
           ...msg,
@@ -85,7 +86,7 @@ export default function TripChat({ tripId, userId, firstName, onBack }) {
   useEffect(() => {
     if (!tripId) return;
 
-    socketRef.current = io("http://localhost:5000", {
+    socketRef.current = io("http://localhost:5000",CLIENT, {
       withCredentials: true,
       transports: ["websocket"]
     });

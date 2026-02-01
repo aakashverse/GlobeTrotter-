@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronRight, Plus, MapPin, Trash2, DollarSign, Activity, Save, Clock, User } from "lucide-react";
 import useToast from "../hooks/useToast";
+const API = import.meta.env.VITE_API_URL;
 
 export default function ItineraryBuilder({ tripId, onBack }) {
   const [stops, setStops] = useState([]);
@@ -17,7 +18,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   return date.toISOString().split('T')[0];  
   };
   
-  fetch(`/api/trips/${tripId}/itinerary`, { credentials: "include" })
+  fetch(`${API}/api/trips/${tripId}/itinerary`, { credentials: "include" })
     .then(res => {
       if (!res.ok) throw new Error('Failed');
       return res.json();
@@ -87,7 +88,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}/itinerary`, {
+      const res = await fetch(`${API}/api/trips/${tripId}/itinerary`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

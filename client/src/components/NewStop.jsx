@@ -4,6 +4,7 @@ import {
   Activity, Save, Clock 
 } from "lucide-react";
 import useToast from "../hooks/useToast";
+const API = import.meta.env.VITE_API_URL;
 
 export default function ItineraryBuilder({ tripId, onBack }) {
   const [stops, setStops] = useState([{
@@ -18,7 +19,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   // Load existing stops
   useEffect(() => {
     if (tripId) {
-      fetch(`/api/trips/${tripId}/itinerary`, {
+      fetch(`${API}/api/trips/${tripId}/itinerary`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -101,7 +102,7 @@ export default function ItineraryBuilder({ tripId, onBack }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}/itinerary`, {
+      const res = await fetch(`${API}/api/trips/${tripId}/itinerary`, {
         method: "POST",
         credentials: 'include',
         headers: { "Content-Type": "application/json" },

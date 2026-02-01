@@ -3,12 +3,13 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, Responsive
 import { ChevronRight } from "lucide-react"; 
 
 const COLORS = ["#22c55e", "#3b82f6", "#f97316", "#a855f7", "#ef4444"];
+const API = import.meta.env.VITE_API_URL;
 
 export default function ExpenseDashboard({ tripId, onBack }) {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetch(`/api/trips/${tripId}/expenses`, { credentials: "include" })
+    fetch(`${API}/api/trips/${tripId}/expenses`, { credentials: "include" })
       .then(res => res.json())
       .then(setData);
   }, [tripId]);
