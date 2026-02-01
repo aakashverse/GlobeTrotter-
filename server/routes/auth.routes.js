@@ -1,34 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
 const path = require('path');
 
 const authenticateToken = require('../Middlewares/auth');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
-
-// multer config
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-
-const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
-  if (!allowed.includes(file.mimetype)) {
-    return cb(new Error('Only images allowed'), false);
-  }
-  cb(null, true);
-};
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, 
-  fileFilter
-});
 
 module.exports = (pool) => {
 
