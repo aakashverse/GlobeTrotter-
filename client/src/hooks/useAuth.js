@@ -13,6 +13,7 @@ export default function useAuth() {
         const res = await fetch(`${API}/api/auth/status`, {
           method: "GET",
           credentials: "include",
+          
         });
 
         if (!res.ok) throw new Error("Not authenticated");
