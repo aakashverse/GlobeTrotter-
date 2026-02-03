@@ -30,7 +30,13 @@ const openai = new OpenAI({
 // });
 
 // DB test
-const pool = mysql.createPool(process.env.DATABASE_URL);
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
 
 async function waitForDB() {
     try {
@@ -77,7 +83,7 @@ async function isTripMember(tripId, user) {
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000", process.env.CLIENT_URL, process.env.VITE_API_URL ],
+    origin: ["http://localhost:5173", "http://localhost:3000", 'https://globe-trotter-nine.vercel.app' ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   }
@@ -166,7 +172,7 @@ io.on("connection", (socket) => {
 
 
 
-// Middleware - PERFECT ORDER
+// Middleware 
 app.use(cors({
   origin: ['https://globe-trotter-nine.vercel.app'],
   credentials: true,
@@ -936,7 +942,8 @@ app.get('/api/trips/:tripId/expenses', authenticateToken, async(req, res) => {
 });
 
 
-const PORT = process.env.PORT;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => 
+  console.log("Server running on", PORT)
+);
+
