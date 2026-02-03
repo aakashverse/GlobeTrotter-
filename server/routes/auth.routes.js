@@ -91,7 +91,7 @@ module.exports = (pool) => {
       }
 
       const [users] = await pool.query(
-        `SELECT user_id, first_name, last_name, email, password_hash,
+        `SELECT user_id, first_name, last_name, email, password_hash
          FROM users WHERE email = ?`,
         [email]
       );
