@@ -142,7 +142,7 @@ module.exports = (pool) => {
       });
 
     } catch (err) {
-      console.error(err);
+      console.error(err, err.message);
       res.status(500).json({
         success: false,
         message: 'Server error'
