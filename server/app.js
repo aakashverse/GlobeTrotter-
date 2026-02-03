@@ -20,8 +20,6 @@ const openai = new OpenAI({
 });
 
 // db
-const pool = mysql.createPool(process.env.DATABASE_URL);
-
 // const pool = mysql.createPool({
 //   host: process.env.DB_HOST,
 //   user: process.env.DB_USER,
@@ -35,7 +33,7 @@ const pool = mysql.createPool(process.env.DATABASE_URL);
 async function waitForDB(retries = 10, delay = 2000) {
   for (let i = 0; i < retries; i++) {
     try {
-      const conn = await pool.getConnection();
+      const conn = mysql.createConnection(process.env.DATABASE_URL);
       console.log("MySQL connected");
       conn.release();
       return;
