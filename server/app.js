@@ -45,8 +45,10 @@ async function waitForDB(retries = 10, delay = 3000) {
   console.error("MySQL connection failed after retries!");
   return false;
 }
-await waitForDB();
 
+(async () => {
+  await waitForDB();
+})();
 
 
 // test db connect
