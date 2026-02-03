@@ -91,7 +91,7 @@ module.exports = (pool) => {
       }
 
       const [users] = await pool.query(
-        `SELECT user_id, first_name, last_name, email, password_hash, profile_photo
+        `SELECT user_id, first_name, last_name, email, password_hash,
          FROM users WHERE email = ?`,
         [email]
       );
@@ -138,7 +138,6 @@ module.exports = (pool) => {
             first_name: user.first_name,
             last_name: user.last_name,
             email: user.email,
-            profile_photo: user.profile_photo,
           },
       });
 
@@ -155,8 +154,9 @@ module.exports = (pool) => {
   router.post('/logout', (req, res) => {
     res.clearCookie('token',{
       httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      secure: 'true',
+      // secure: process.env.NODE_ENV === 'production',
     })
 
     res.json({

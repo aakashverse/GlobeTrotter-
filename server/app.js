@@ -28,21 +28,25 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-async function waitForDB() {
+async function waitForDB(retries = 10, delay = 3000) {
+  while (retries > 0) {
     try {
       const conn = await pool.getConnection();
       await conn.ping();
       conn.release();
-
       console.log("MySQL connected");
-      return;
+      return true;
     } catch (err) {
-      console.log(`MySQL not ready yet!`, err.message);
+      console.log("MySQL not ready:", err.message);
+      retries--;
+      await new Promise(r => setTimeout(r, delay));
     }
-  console.error("MySQL connection failed!");
+  }
+  console.error("MySQL connection failed after retries!");
+  return false;
 }
+await waitForDB();
 
-waitForDB();
 
 
 // test db connect
