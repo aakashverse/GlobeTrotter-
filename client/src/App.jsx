@@ -60,7 +60,9 @@ export default function App() {
 
   
   const handleNavigate = (path, state) => {
-    if (path.includes('edit')) {
+    if(path.includes('create-trip')){
+      setCurrentScreen('create-trip');
+    } else if (path.includes('edit')) {
       setCurrentScreen('edit-trip');
       setCurrentTrip(state?.trip);  // pass trip
     } else if (path.includes('new-stop')) {
