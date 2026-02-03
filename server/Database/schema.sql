@@ -52,6 +52,7 @@ CREATE TABLE trips (
     status VARCHAR(20) DEFAULT 'pending',
     start_date DATE,
     end_date DATE,
+    destination VARCHAR(255),
     total_budget DECIMAL(12,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
