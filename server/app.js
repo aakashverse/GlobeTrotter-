@@ -30,22 +30,24 @@ const openai = new OpenAI({
 // });
 
 // DB test
-async function waitForDB(retries = 10, delay = 2000) {
-  for (let i = 0; i < retries; i++) {
+const pool = mysql.createPool(process.env.DATABASE_URL);
+
+async function waitForDB() {
     try {
-      const conn = mysql.createConnection(process.env.DATABASE_URL);
-      console.log("MySQL connected");
+      const conn = await pool.getConnection();
+      await conn.ping();
       conn.release();
+
+      console.log("MySQL connected");
       return;
     } catch (err) {
-      console.log(`MySQL not ready (${i+1}/${retries}):`, err.message);
-      await new Promise(r => setTimeout(r, delay));
+      console.log(`MySQL not ready yet!`, err.message);
     }
-  }
   console.error("MySQL connection failed!");
 }
 
 waitForDB();
+
 
 // test db connect
 app.get("/api/health/db", async (req, res) => {
