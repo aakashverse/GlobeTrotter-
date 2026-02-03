@@ -62,6 +62,6 @@
 ### Steps
 
 ```bash
-git clone https://github.com/yourusername/globetrotter.git
+git clone https://github.com/aakashverse/globetrotter.git
 cd globetrotter
 npm start
